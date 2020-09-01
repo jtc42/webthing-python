@@ -134,11 +134,9 @@ First we create a new Thing:
        'A web connected humidity sensor'
   )
 
-Then we create and add the appropriate property:
+Then we create and add the appropriate property.
 
-* ``level``: tells us what the sensor is actually reading
-
-  - Contrary to the light, the value cannot be set via an API call, as it wouldn't make much sense, to SET what a sensor is reading. Therefore, we are creating a **readOnly** property.
+Contrary to the light, the value cannot be set via an API call, as it wouldn't make much sense, to SET what a sensor is reading. Therefore, we are creating a **readOnly** property.
 
     .. code:: python
 
@@ -162,22 +160,22 @@ In this example, we pass a `readproperty` method that will read and return the s
 
 Alternatively, we can create a thread that queries the physical sensor every few seconds. We first remove the `readproperty` argument from our Property.
 
-  .. code:: python
+.. code:: python
 
-    sensor.add_property(
-        Property(
-            sensor,
-            'level',
-            metadata={
-                '@type': 'LevelProperty',
-                'title': 'Humidity',
-                'type': 'number',
-                'description': 'The current humidity in %',
-                'minimum': 0,
-                'maximum': 100,
-                'unit': 'percent',
-                'readOnly': True,
-            }))
+  sensor.add_property(
+      Property(
+          sensor,
+          'level',
+          metadata={
+              '@type': 'LevelProperty',
+              'title': 'Humidity',
+              'type': 'number',
+              'description': 'The current humidity in %',
+              'minimum': 0,
+              'maximum': 100,
+              'unit': 'percent',
+              'readOnly': True,
+          }))
 
 We then create our looping function to periodically query the sensor and set the property value.
 

@@ -20,7 +20,7 @@ class Thing:
             type_ = [type_]
 
         self.id = id_
-        self.context = "https://iot.mozilla.org/schemas"
+        self.context = "https://www.w3.org/2019/wot/td/v1"
         self.type = type_
         self.title = title
         self.description = description
@@ -31,6 +31,11 @@ class Thing:
         self.subscribers = set()
         self.href_prefix = ""
         self.ui_href = None
+
+    def add_context(self, context):
+        if isinstance(self.context, str):
+            self.context = [self.context]
+        self.context.append(context)
 
     def as_thing_description(self):
         """

@@ -19,6 +19,8 @@ def make_thing():
         "A web connected lamp",
     )
 
+    thing.add_context("https://iot.mozilla.org/schemas")
+
     on_property = Property(
         thing,
         "on",
@@ -110,8 +112,6 @@ def make_thing():
 def run_server():
     thing = make_thing()
 
-    # If adding more than one thing, use MultipleThings() with a name.
-    # In the single thing case, the thing's name will be broadcast.
     server = WebThingServer(thing, port=8888, debug=True)
     try:
         logging.info("starting the server")

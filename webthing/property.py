@@ -5,7 +5,7 @@ from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 
 from .errors import PropertyError
-
+from .value import Value
 
 class Property:
     """A Property represents an individual state value of a thing."""

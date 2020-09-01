@@ -64,6 +64,6 @@ class Value(EventEmitter):
 
         value -- new value
         """
-        if value is not None and value != self.last_value:
-            self.last_value = value
+        if value is not None and value != self._value:
+            self._value = value
             self.emit("update", value)

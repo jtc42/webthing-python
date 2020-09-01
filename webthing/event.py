@@ -26,13 +26,11 @@ class Event:
         Returns a dictionary describing the event.
         """
         description = {
-            self.name: {
-                'timestamp': self.time,
-            },
+            self.name: {"timestamp": self.time,},
         }
 
         if self.data is not None:
-            description[self.name]['data'] = self.data
+            description[self.name]["data"] = self.data
 
         return description
 

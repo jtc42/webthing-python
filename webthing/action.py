@@ -19,9 +19,9 @@ class Action:
         self.thing = thing
         self.name = name
         self.input = input_
-        self.href_prefix = ''
-        self.href = '/actions/{}/{}'.format(self.name, self.id)
-        self.status = 'created'
+        self.href_prefix = ""
+        self.href = "/actions/{}/{}".format(self.name, self.id)
+        self.status = "created"
         self.time_requested = timestamp()
         self.time_completed = None
 
@@ -33,17 +33,17 @@ class Action:
         """
         description = {
             self.name: {
-                'href': self.href_prefix + self.href,
-                'timeRequested': self.time_requested,
-                'status': self.status,
+                "href": self.href_prefix + self.href,
+                "timeRequested": self.time_requested,
+                "status": self.status,
             },
         }
 
         if self.input is not None:
-            description[self.name]['input'] = self.input
+            description[self.name]["input"] = self.input
 
         if self.time_completed is not None:
-            description[self.name]['timeCompleted'] = self.time_completed
+            description[self.name]["timeCompleted"] = self.time_completed
 
         return description
 
@@ -89,7 +89,7 @@ class Action:
 
     def start(self):
         """Start performing the action."""
-        self.status = 'pending'
+        self.status = "pending"
         self.thing.action_notify(self)
         self.perform_action()
         self.finish()
@@ -104,6 +104,6 @@ class Action:
 
     def finish(self):
         """Finish performing the action."""
-        self.status = 'completed'
+        self.status = "completed"
         self.time_completed = timestamp()
         self.thing.action_notify(self)

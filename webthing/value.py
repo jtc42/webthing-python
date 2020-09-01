@@ -55,4 +55,4 @@ class Value(EventEmitter):
         """
         if value is not None and value != self.last_value:
             self.last_value = value
-            self.emit('update', value)
+            self.emit("update", value)

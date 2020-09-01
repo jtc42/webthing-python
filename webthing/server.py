@@ -25,11 +25,11 @@ def perform_action(action):
 class BaseHandler(tornado.web.RequestHandler):
     """Base handler that is initialized with a thing."""
 
-    def initialize(self, things, hosts):
+    def initialize(self, thing, hosts):
         """
         Initialize the handler.
 
-        things -- list of Things managed by this server
+        thing -- Thing managed by this server
         hosts -- list of allowed hostnames
         """
         self.thing = thing
@@ -67,50 +67,14 @@ class BaseHandler(tornado.web.RequestHandler):
         self.set_status(204)
 
 
-class ThingsHandler(BaseHandler):
-    """Handle a request to / when the server manages multiple things."""
-
-    def get(self):
-        """
-        Handle a GET request.
-
-        property_name -- the name of the property from the URL path
-        """
-        self.set_header("Content-Type", "application/json")
-        ws_href = "{}://{}".format(
-            "wss" if self.request.protocol == "https" else "ws",
-            self.request.headers.get("Host", ""),
-        )
-
-        descriptions = []
-
-        description = self.thing.as_thing_description()
-        description["href"] = self.thing.get_href()
-        description["links"].append(
-            {"rel": "alternate", "href": "{}{}".format(ws_href, self.thing.get_href()),}
-        )
-        description["base"] = "{}://{}{}".format(
-            self.request.protocol,
-            self.request.headers.get("Host", ""),
-            self.thing.get_href(),
-        )
-        description["securityDefinitions"] = {
-            "nosec_sc": {"scheme": "nosec",},
-        }
-        description["security"] = "nosec_sc"
-        descriptions.append(description)
-
-        self.write(json.dumps(descriptions))
-
-
 class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
     """Handle a request to /."""
 
-    def initialize(self, things, hosts):
+    def initialize(self, thing, hosts):
         """
         Initialize the handler.
 
-        things -- list of Things managed by this server
+        thing -- Thing managed by this server
         hosts -- list of allowed hostnames
         """
         self.thing = thing
@@ -379,7 +343,7 @@ class PropertyHandler(BaseHandler):
 
         if thing.has_property(property_name):
             self.set_header("Content-Type", "application/json")
-            self.write(json.dumps({property_name: thing.get_property(property_name),}))
+            self.write(json.dumps(thing.get_property(property_name)))
         else:
             self.set_status(404)
 
@@ -401,13 +365,9 @@ class PropertyHandler(BaseHandler):
             self.set_status(400)
             return
 
-        if property_name not in args:
-            self.set_status(400)
-            return
-
         if thing.has_property(property_name):
             try:
-                thing.set_property(property_name, args[property_name])
+                thing.set_property(property_name, args)
             except PropertyError:
                 self.set_status(400)
                 return
@@ -665,7 +625,7 @@ class WebThingServer:
         base_path -- base URL path to use, rather than '/'
         """
         self.thing = thing
-        self.name = things.get_name()
+        self.name = thing.title
         self.port = port
         self.hostname = hostname
         self.base_path = base_path.rstrip("/")

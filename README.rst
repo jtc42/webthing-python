@@ -8,7 +8,7 @@ webthing
 .. image:: https://img.shields.io/badge/license-MPL--2.0-blue.svg
     :target: https://github.com/mozilla-iot/webthing-python/blob/master/LICENSE.txt
 
-Implementation of an HTTP `Web Thing <https://iot.mozilla.org/wot/>`_. This library is compatible with Python 2.7 and 3.5+.
+Implementation of an HTTP `Web Thing <https://iot.mozilla.org/wot/>`_. This library is compatible with Python 3.5+.
 
 Installation
 ============
@@ -138,23 +138,23 @@ Then we create and add the appropriate property.
 
 Contrary to the light, the value cannot be set via an API call, as it wouldn't make much sense, to SET what a sensor is reading. Therefore, we are creating a **readOnly** property.
 
-    .. code:: python
+.. code:: python
 
-      sensor.add_property(
-          Property(
-              sensor,
-              'level',
-              readproperty=self.read_from_gpio,
-              metadata={
-                  '@type': 'LevelProperty',
-                  'title': 'Humidity',
-                  'type': 'number',
-                  'description': 'The current humidity in %',
-                  'minimum': 0,
-                  'maximum': 100,
-                  'unit': 'percent',
-                  'readOnly': True,
-              }))
+  sensor.add_property(
+      Property(
+          sensor,
+          'level',
+          readproperty=self.read_from_gpio,
+          metadata={
+              '@type': 'LevelProperty',
+              'title': 'Humidity',
+              'type': 'number',
+              'description': 'The current humidity in %',
+              'minimum': 0,
+              'maximum': 100,
+              'unit': 'percent',
+              'readOnly': True,
+          }))
 
 In this example, we pass a `readproperty` method that will read and return the sensor value every time it is requested.
 

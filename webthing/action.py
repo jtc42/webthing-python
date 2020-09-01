@@ -1,12 +1,13 @@
 """High-level Action base class implementation."""
 
+import uuid
 from .utils import timestamp
 
 
-class Action:
-    """An Action represents an individual action on a thing."""
+class ActionObject:
+    """An ActionObject represents an individual action on a thing."""
 
-    def __init__(self, id_, thing, name, input_):
+    def __init__(self, thing, name, target, input_, cancel=None):
         """
         Initialize the object.
 
@@ -15,10 +16,14 @@ class Action:
         name -- name of the action
         input_ -- any action inputs
         """
-        self.id = id_
+        self.id = uuid.uuid4().hex
         self.thing = thing
         self.name = name
+
+        self.target_function = target
+        self.cancel_function = cancel
         self.input = input_
+
         self.href_prefix = ""
         self.href = "/actions/{}/{}".format(self.name, self.id)
         self.status = "created"
@@ -91,19 +96,34 @@ class Action:
         """Start performing the action."""
         self.status = "pending"
         self.thing.action_notify(self)
-        self.perform_action()
+        self.target_function(self.input)
         self.finish()
 
-    def perform_action(self):
-        """Override this with the code necessary to perform the action."""
-        pass
-
     def cancel(self):
-        """Override this with the code necessary to cancel the action."""
-        pass
+        self.cancel_function()
 
     def finish(self):
         """Finish performing the action."""
         self.status = "completed"
         self.time_completed = timestamp()
         self.thing.action_notify(self)
+
+
+class Action:
+    """An Action represents a class of actions on a thing."""
+
+    def __init__(self, thing, name, invokeaction=None, metadata=None):
+        self.thing = thing
+        self.name = name
+        self.href_prefix = ""
+        self.href = "/actions/{}".format(self.name)
+        self.metadata = metadata if metadata is not None else {}
+
+        self.invokeaction_forwarder = invokeaction or (lambda: None)
+
+        self.queue = []
+
+    def invokeaction(self, input_):
+        action_obj = ActionObject(self.thing, self.name, self.invokeaction_forwarder, input_)
+        self.queue.append(action_obj)
+        return action_obj

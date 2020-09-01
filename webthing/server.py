@@ -407,7 +407,7 @@ class ActionsHandler(BaseHandler):
             return
 
         try:
-            message = json.loads(self.request.body.decode())
+            args = json.loads(self.request.body.decode())
         except ValueError:
             self.set_status(400)
             return
@@ -468,26 +468,12 @@ class ActionHandler(BaseHandler):
             return
 
         try:
-            message = json.loads(self.request.body.decode())
+            args = json.loads(self.request.body.decode())
         except ValueError:
             self.set_status(400)
             return
 
-        keys = list(message.keys())
-        if len(keys) != 1:
-            self.set_status(400)
-            return
-
-        if keys[0] != action_name:
-            self.set_status(400)
-            return
-
-        action_params = message[action_name]
-        input_ = None
-        if "input" in action_params:
-            input_ = action_params["input"]
-
-        action = thing.perform_action(action_name, input_)
+        action = thing.perform_action(action_name, args)
         if action:
             response = action.as_action_description()
 
@@ -610,6 +596,7 @@ class WebThingServer:
         ssl_options=None,
         additional_routes=None,
         base_path="",
+        debug=False
     ):
         """
         Initialize the WebThingServer.
@@ -688,7 +675,7 @@ class WebThingServer:
             for h in handlers:
                 h[0] = self.base_path + h[0]
 
-        self.app = tornado.web.Application(handlers)
+        self.app = tornado.web.Application(handlers, debug=debug)
         self.app.is_tls = ssl_options is not None
         self.server = tornado.httpserver.HTTPServer(self.app, ssl_options=ssl_options)
 

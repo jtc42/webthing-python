@@ -50,8 +50,14 @@ class Thing:
                     "rel": "properties",
                     "href": "{}/properties".format(self.href_prefix),
                 },
-                {"rel": "actions", "href": "{}/actions".format(self.href_prefix),},
-                {"rel": "events", "href": "{}/events".format(self.href_prefix),},
+                {
+                    "rel": "actions",
+                    "href": "{}/actions".format(self.href_prefix),
+                },
+                {
+                    "rel": "events",
+                    "href": "{}/events".format(self.href_prefix),
+                },
             ],
         }
 
@@ -75,7 +81,11 @@ class Thing:
 
         if self.ui_href is not None:
             thing["links"].append(
-                {"rel": "alternate", "mediaType": "text/html", "href": self.ui_href,}
+                {
+                    "rel": "alternate",
+                    "mediaType": "text/html",
+                    "href": self.ui_href,
+                }
             )
 
         if self.description:
@@ -319,9 +329,9 @@ class Thing:
             "subscribers": set(),
         }
 
-    def perform_action(self, action_name, input_=None):
+    def init_action(self, action_name, input_=None):
         """
-        Perform an action on the thing.
+        Initialise an action on the thing, without starting it
 
         action_name -- name of the action
         input_ -- any action inputs
@@ -342,7 +352,6 @@ class Thing:
         action_obj = action.invokeaction(input_)
         action_obj.set_href_prefix(self.href_prefix)
         self.action_notify(action_obj)
-        action_obj.start()
         return action_obj
 
     def remove_action(self, action_name, action_id):

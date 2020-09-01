@@ -1,13 +1,14 @@
 """High-level Action base class implementation."""
 
 import uuid
+import asyncio
 from .utils import timestamp
 
 
 class ActionObject:
     """An ActionObject represents an individual action on a thing."""
 
-    def __init__(self, thing, name, target, input_, cancel=None):
+    def __init__(self, thing, name, target, input_):
         """
         Initialize the object.
 
@@ -21,8 +22,8 @@ class ActionObject:
         self.name = name
 
         self.target_function = target
-        self.cancel_function = cancel
         self.input = input_
+        self.output = None
 
         self.href_prefix = ""
         self.href = "/actions/{}/{}".format(self.name, self.id)
@@ -46,6 +47,9 @@ class ActionObject:
 
         if self.input is not None:
             description[self.name]["input"] = self.input
+
+        if self.output is not None:
+            description[self.name]["output"] = self.output
 
         if self.time_completed is not None:
             description[self.name]["timeCompleted"] = self.time_completed
@@ -92,15 +96,25 @@ class ActionObject:
         """Get the inputs for this action."""
         return self.input
 
-    def start(self):
+    async def start(self):
         """Start performing the action."""
         self.status = "pending"
         self.thing.action_notify(self)
-        self.target_function(self.input)
+        # If the action function is async
+        if asyncio.iscoroutinefunction(self.target_function):
+            # Await the action function
+            self.output = await self.target_function(self.input)
+        # If the action function is not async
+        else:
+            # Run in the default ThreadPoolExecutor
+            self.output = await asyncio.get_event_loop().run_in_executor(
+                None, self.target_function, self.input
+            )
         self.finish()
 
     def cancel(self):
-        self.cancel_function()
+        # TODO: Implement coroutine cancellation
+        pass
 
     def finish(self):
         """Finish performing the action."""
@@ -124,6 +138,8 @@ class Action:
         self.queue = []
 
     def invokeaction(self, input_):
-        action_obj = ActionObject(self.thing, self.name, self.invokeaction_forwarder, input_)
+        action_obj = ActionObject(
+            self.thing, self.name, self.invokeaction_forwarder, input_
+        )
         self.queue.append(action_obj)
         return action_obj

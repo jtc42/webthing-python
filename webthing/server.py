@@ -43,16 +43,6 @@ class BaseHandler(tornado.web.RequestHandler):
 
         raise tornado.web.HTTPError(403)
 
-    def get_thing(self, thing_id):
-        """
-        Get the thing this request is for.
-
-        thing_id -- ID of the thing to get, in string form
-
-        Returns the thing, or None if not found.
-        """
-        return self.thing
-
     def set_default_headers(self, *args, **kwargs):
         """Set the default headers for all requests."""
         self.set_header("Access-Control-Allow-Origin", "*")
@@ -101,24 +91,11 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
         """Handle an OPTIONS request."""
         self.set_status(204)
 
-    def get_thing(self, thing_id):
-        """
-        Get the thing this request is for.
-
-        thing_id -- ID of the thing to get, in string form
-
-        Returns the thing, or None if not found.
-        """
-        return self.thing
-
     @tornado.gen.coroutine
-    def get(self, thing_id="0"):
+    def get(self):
         """
         Handle a GET request, including websocket requests.
-
-        thing_id -- ID of the thing this request is for
         """
-        self.thing = self.get_thing(thing_id)
         if self.thing is None:
             self.set_status(404)
             self.finish()
@@ -322,51 +299,44 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
 class PropertiesHandler(BaseHandler):
     """Handle a request to /properties."""
 
-    def get(self, thing_id="0"):
+    def get(self):
         """
         Handle a GET request.
-
-        thing_id -- ID of the thing this request is for
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
         self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(thing.get_properties()))
+        self.write(json.dumps(self.thing.get_properties()))
 
 
 class PropertyHandler(BaseHandler):
     """Handle a request to /properties/<property>."""
 
-    def get(self, thing_id="0", property_name=None):
+    def get(self, property_name=None):
         """
         Handle a GET request.
 
-        thing_id -- ID of the thing this request is for
         property_name -- the name of the property from the URL path
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
-        if thing.has_property(property_name):
+        if self.thing.has_property(property_name):
             self.set_header("Content-Type", "application/json")
-            self.write(json.dumps(thing.get_property(property_name)))
+            self.write(json.dumps(self.thing.get_property(property_name)))
         else:
             self.set_status(404)
 
-    def put(self, thing_id="0", property_name=None):
+    def put(self, property_name=None):
         """
         Handle a PUT request.
 
-        thing_id -- ID of the thing this request is for
         property_name -- the name of the property from the URL path
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
@@ -376,9 +346,9 @@ class PropertyHandler(BaseHandler):
             self.set_status(400)
             return
 
-        if thing.has_property(property_name):
+        if self.thing.has_property(property_name):
             try:
-                thing.set_property(property_name, args)
+                self.thing.set_property(property_name, args)
             except PropertyError:
                 self.set_status(400)
                 return
@@ -387,7 +357,7 @@ class PropertyHandler(BaseHandler):
             self.write(
                 json.dumps(
                     {
-                        property_name: thing.get_property(property_name),
+                        property_name: self.thing.get_property(property_name),
                     }
                 )
             )
@@ -398,28 +368,22 @@ class PropertyHandler(BaseHandler):
 class ActionsHandler(BaseHandler):
     """Handle a request to /actions."""
 
-    def get(self, thing_id="0"):
+    def get(self):
         """
         Handle a GET request.
-
-        thing_id -- ID of the thing this request is for
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
         self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(thing.get_action_descriptions()))
+        self.write(json.dumps(self.thing.get_action_descriptions()))
 
-    def post(self, thing_id="0"):
+    def post(self):
         """
         Handle a POST request.
-
-        thing_id -- ID of the thing this request is for
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
@@ -440,7 +404,7 @@ class ActionsHandler(BaseHandler):
         if "input" in action_params:
             input_ = action_params["input"]
 
-        action = thing.init_action(action_name, input_)
+        action = self.thing.init_action(action_name, input_)
         if action:
             response = action.as_action_description()
 
@@ -456,29 +420,24 @@ class ActionsHandler(BaseHandler):
 class ActionHandler(BaseHandler):
     """Handle a request to /actions/<action_name>."""
 
-    def get(self, thing_id="0", action_name=None):
+    def get(self, action_name=None):
         """
         Handle a GET request.
 
-        thing_id -- ID of the thing this request is for
         action_name -- name of the action from the URL path
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
         self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(thing.get_action_descriptions(action_name=action_name)))
+        self.write(json.dumps(self.thing.get_action_descriptions(action_name=action_name)))
 
-    def post(self, thing_id="0", action_name=None):
+    def post(self, action_name=None):
         """
         Handle a POST request.
-
-        thing_id -- ID of the thing this request is for
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
@@ -488,7 +447,7 @@ class ActionHandler(BaseHandler):
             self.set_status(400)
             return
 
-        action = thing.init_action(action_name, args)
+        action = self.thing.init_action(action_name, args)
         if action:
             response = action.as_action_description()
 
@@ -504,20 +463,18 @@ class ActionHandler(BaseHandler):
 class ActionIDHandler(BaseHandler):
     """Handle a request to /actions/<action_name>/<action_id>."""
 
-    def get(self, thing_id="0", action_name=None, action_id=None):
+    def get(self, action_name=None, action_id=None):
         """
         Handle a GET request.
 
-        thing_id -- ID of the thing this request is for
         action_name -- name of the action from the URL path
         action_id -- the action ID from the URL path
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
-        action = thing.get_action(action_name, action_id)
+        action = self.thing.get_action(action_name, action_id)
         if action is None:
             self.set_status(404)
             return
@@ -525,37 +482,33 @@ class ActionIDHandler(BaseHandler):
         self.set_header("Content-Type", "application/json")
         self.write(json.dumps(action.as_action_description()))
 
-    def put(self, thing_id="0", action_name=None, action_id=None):
+    def put(self,  action_name=None, action_id=None):
         """
         Handle a PUT request.
 
         TODO: this is not yet defined in the spec
 
-        thing_id -- ID of the thing this request is for
         action_name -- name of the action from the URL path
         action_id -- the action ID from the URL path
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
         self.set_status(200)
 
-    def delete(self, thing_id="0", action_name=None, action_id=None):
+    def delete(self, action_name=None, action_id=None):
         """
         Handle a DELETE request.
 
-        thing_id -- ID of the thing this request is for
         action_name -- name of the action from the URL path
         action_id -- the action ID from the URL path
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
-        if thing.remove_action(action_name, action_id):
+        if self.thing.remove_action(action_name, action_id):
             self.set_status(204)
         else:
             self.set_status(404)
@@ -564,38 +517,33 @@ class ActionIDHandler(BaseHandler):
 class EventsHandler(BaseHandler):
     """Handle a request to /events."""
 
-    def get(self, thing_id="0"):
+    def get(self):
         """
         Handle a GET request.
-
-        thing_id -- ID of the thing this request is for
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
         self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(thing.get_event_descriptions()))
+        self.write(json.dumps(self.thing.get_event_descriptions()))
 
 
 class EventHandler(BaseHandler):
     """Handle a request to /events/<event_name>."""
 
-    def get(self, thing_id="0", event_name=None):
+    def get(self, event_name=None):
         """
         Handle a GET request.
 
-        thing_id -- ID of the thing this request is for
         event_name -- name of the event from the URL path
         """
-        thing = self.get_thing(thing_id)
-        if thing is None:
+        if self.thing is None:
             self.set_status(404)
             return
 
         self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(thing.get_event_descriptions(event_name=event_name)))
+        self.write(json.dumps(self.thing.get_event_descriptions(event_name=event_name)))
 
 
 class WebThingServer:

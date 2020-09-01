@@ -7,6 +7,7 @@ from jsonschema.exceptions import ValidationError
 from .errors import PropertyError
 from .value import Value
 
+
 class Property:
     """A Property represents an individual state value of a thing."""
 
@@ -70,7 +71,10 @@ class Property:
             description["links"] = []
 
         description["links"].append(
-            {"rel": "property", "href": self.href_prefix + self.href,}
+            {
+                "rel": "property",
+                "href": self.href_prefix + self.href,
+            }
         )
         return description
 

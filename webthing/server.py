@@ -136,7 +136,10 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
 
         description = self.thing.as_thing_description()
         description["links"].append(
-            {"rel": "alternate", "href": "{}{}".format(ws_href, self.thing.get_href()),}
+            {
+                "rel": "alternate",
+                "href": "{}{}".format(ws_href, self.thing.get_href()),
+            }
         )
         description["base"] = "{}://{}{}".format(
             self.request.protocol,
@@ -144,7 +147,9 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
             self.thing.get_href(),
         )
         description["securityDefinitions"] = {
-            "nosec_sc": {"scheme": "nosec",},
+            "nosec_sc": {
+                "scheme": "nosec",
+            },
         }
         description["security"] = "nosec_sc"
 
@@ -222,11 +227,9 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
                 if "input" in action_params:
                     input_ = action_params["input"]
 
-                action = self.thing.perform_action(action_name, input_)
+                action = self.thing.init_action(action_name, input_)
                 if action:
-                    tornado.ioloop.IOLoop.current().spawn_callback(
-                        perform_action, action,
-                    )
+                    tornado.ioloop.IOLoop.current().spawn_callback(action.start)
                 else:
                     self.write_message(
                         json.dumps(
@@ -277,7 +280,9 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
         message = json.dumps(
             {
                 "messageType": "propertyStatus",
-                "data": {property_.name: property_.get_value(),},
+                "data": {
+                    property_.name: property_.get_value(),
+                },
             }
         )
 
@@ -290,7 +295,10 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
         :param action: Action
         """
         message = json.dumps(
-            {"messageType": "actionStatus", "data": action.as_action_description(),}
+            {
+                "messageType": "actionStatus",
+                "data": action.as_action_description(),
+            }
         )
 
         self.write_message(message)
@@ -302,7 +310,10 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
         :param event: Event
         """
         message = json.dumps(
-            {"messageType": "event", "data": event.as_event_description(),}
+            {
+                "messageType": "event",
+                "data": event.as_event_description(),
+            }
         )
 
         self.write_message(message)
@@ -373,7 +384,13 @@ class PropertyHandler(BaseHandler):
                 return
 
             self.set_header("Content-Type", "application/json")
-            self.write(json.dumps({property_name: thing.get_property(property_name),}))
+            self.write(
+                json.dumps(
+                    {
+                        property_name: thing.get_property(property_name),
+                    }
+                )
+            )
         else:
             self.set_status(404)
 
@@ -423,14 +440,12 @@ class ActionsHandler(BaseHandler):
         if "input" in action_params:
             input_ = action_params["input"]
 
-        action = thing.perform_action(action_name, input_)
+        action = thing.init_action(action_name, input_)
         if action:
             response = action.as_action_description()
 
             # Start the action
-            tornado.ioloop.IOLoop.current().spawn_callback(
-                perform_action, action,
-            )
+            tornado.ioloop.IOLoop.current().spawn_callback(action.start)
 
             self.set_status(201)
             self.write(json.dumps(response))
@@ -473,14 +488,12 @@ class ActionHandler(BaseHandler):
             self.set_status(400)
             return
 
-        action = thing.perform_action(action_name, args)
+        action = thing.init_action(action_name, args)
         if action:
             response = action.as_action_description()
 
             # Start the action
-            tornado.ioloop.IOLoop.current().spawn_callback(
-                perform_action, action,
-            )
+            tornado.ioloop.IOLoop.current().spawn_callback(action.start)
 
             self.set_status(201)
             self.write(json.dumps(response))
@@ -596,7 +609,7 @@ class WebThingServer:
         ssl_options=None,
         additional_routes=None,
         base_path="",
-        debug=False
+        debug=False,
     ):
         """
         Initialize the WebThingServer.
@@ -627,18 +640,28 @@ class WebThingServer:
 
         for address in get_addresses():
             self.hosts.extend(
-                [address, "{}:{}".format(address, self.port),]
+                [
+                    address,
+                    "{}:{}".format(address, self.port),
+                ]
             )
 
         if self.hostname is not None:
             self.hostname = self.hostname.lower()
             self.hosts.extend(
-                [self.hostname, "{}:{}".format(self.hostname, self.port),]
+                [
+                    self.hostname,
+                    "{}:{}".format(self.hostname, self.port),
+                ]
             )
 
         self.thing.set_href_prefix(self.base_path)
         handlers = [
-            [r"/?", ThingHandler, dict(thing=self.thing, hosts=self.hosts),],
+            [
+                r"/?",
+                ThingHandler,
+                dict(thing=self.thing, hosts=self.hosts),
+            ],
             [
                 r"/properties/?",
                 PropertiesHandler,
@@ -649,7 +672,11 @@ class WebThingServer:
                 PropertyHandler,
                 dict(thing=self.thing, hosts=self.hosts),
             ],
-            [r"/actions/?", ActionsHandler, dict(thing=self.thing, hosts=self.hosts),],
+            [
+                r"/actions/?",
+                ActionsHandler,
+                dict(thing=self.thing, hosts=self.hosts),
+            ],
             [
                 r"/actions/(?P<action_name>[^/]+)/?",
                 ActionHandler,
@@ -660,7 +687,11 @@ class WebThingServer:
                 ActionIDHandler,
                 dict(thing=self.thing, hosts=self.hosts),
             ],
-            [r"/events/?", EventsHandler, dict(thing=self.thing, hosts=self.hosts),],
+            [
+                r"/events/?",
+                EventsHandler,
+                dict(thing=self.thing, hosts=self.hosts),
+            ],
             [
                 r"/events/(?P<event_name>[^/]+)/?",
                 EventHandler,
@@ -687,7 +718,9 @@ class WebThingServer:
         ]
         kwargs = {
             "port": self.port,
-            "properties": {"path": "/",},
+            "properties": {
+                "path": "/",
+            },
             "server": "{}.local.".format(socket.gethostname()),
         }
 

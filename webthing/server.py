@@ -22,68 +22,6 @@ def perform_action(action):
     action.start()
 
 
-class SingleThing:
-    """A container for a single thing."""
-
-    def __init__(self, thing):
-        """
-        Initialize the container.
-
-        thing -- the thing to store
-        """
-        self.thing = thing
-
-    def get_thing(self, _=None):
-        """Get the thing at the given index."""
-        return self.thing
-
-    def get_things(self):
-        """Get the list of things."""
-        return [self.thing]
-
-    def get_name(self):
-        """Get the mDNS server name."""
-        return self.thing.title
-
-
-class MultipleThings:
-    """A container for multiple things."""
-
-    def __init__(self, things, name):
-        """
-        Initialize the container.
-
-        things -- the things to store
-        name -- the mDNS server name
-        """
-        self.things = things
-        self.name = name
-
-    def get_thing(self, idx):
-        """
-        Get the thing at the given index.
-
-        idx -- the index
-        """
-        try:
-            idx = int(idx)
-        except ValueError:
-            return None
-
-        if idx < 0 or idx >= len(self.things):
-            return None
-
-        return self.things[idx]
-
-    def get_things(self):
-        """Get the list of things."""
-        return self.things
-
-    def get_name(self):
-        """Get the mDNS server name."""
-        return self.name
-
-
 class BaseHandler(tornado.web.RequestHandler):
     """Base handler that is initialized with a thing."""
 
@@ -94,7 +32,7 @@ class BaseHandler(tornado.web.RequestHandler):
         things -- list of Things managed by this server
         hosts -- list of allowed hostnames
         """
-        self.things = things
+        self.thing = thing
         self.hosts = hosts
 
     def prepare(self):
@@ -113,7 +51,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
         Returns the thing, or None if not found.
         """
-        return self.things.get_thing(thing_id)
+        return self.thing
 
     def set_default_headers(self, *args, **kwargs):
         """Set the default headers for all requests."""
@@ -145,22 +83,22 @@ class ThingsHandler(BaseHandler):
         )
 
         descriptions = []
-        for thing in self.things.get_things():
-            description = thing.as_thing_description()
-            description["href"] = thing.get_href()
-            description["links"].append(
-                {"rel": "alternate", "href": "{}{}".format(ws_href, thing.get_href()),}
-            )
-            description["base"] = "{}://{}{}".format(
-                self.request.protocol,
-                self.request.headers.get("Host", ""),
-                thing.get_href(),
-            )
-            description["securityDefinitions"] = {
-                "nosec_sc": {"scheme": "nosec",},
-            }
-            description["security"] = "nosec_sc"
-            descriptions.append(description)
+
+        description = self.thing.as_thing_description()
+        description["href"] = self.thing.get_href()
+        description["links"].append(
+            {"rel": "alternate", "href": "{}{}".format(ws_href, self.thing.get_href()),}
+        )
+        description["base"] = "{}://{}{}".format(
+            self.request.protocol,
+            self.request.headers.get("Host", ""),
+            self.thing.get_href(),
+        )
+        description["securityDefinitions"] = {
+            "nosec_sc": {"scheme": "nosec",},
+        }
+        description["security"] = "nosec_sc"
+        descriptions.append(description)
 
         self.write(json.dumps(descriptions))
 
@@ -175,7 +113,7 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
         things -- list of Things managed by this server
         hosts -- list of allowed hostnames
         """
-        self.things = things
+        self.thing = thing
         self.hosts = hosts
 
     def prepare(self):
@@ -207,7 +145,7 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
 
         Returns the thing, or None if not found.
         """
-        return self.things.get_thing(thing_id)
+        return self.thing
 
     @tornado.gen.coroutine
     def get(self, thing_id="0"):
@@ -706,7 +644,7 @@ class WebThingServer:
 
     def __init__(
         self,
-        things,
+        thing,
         port=80,
         hostname=None,
         ssl_options=None,
@@ -719,15 +657,14 @@ class WebThingServer:
         For documentation on the additional route format, see:
         https://www.tornadoweb.org/en/stable/web.html#tornado.web.Application
 
-        things -- things managed by this server -- should be of type
-                  SingleThing or MultipleThings
+        thing -- thing managed by this server -- should be of type Thing
         port -- port to listen on (defaults to 80)
         hostname -- Optional host name, i.e. mything.com
         ssl_options -- dict of SSL options to pass to the tornado server
         additional_routes -- list of additional routes to add to the server
         base_path -- base URL path to use, rather than '/'
         """
-        self.things = things
+        self.thing = thing
         self.name = things.get_name()
         self.port = port
         self.hostname = hostname
@@ -752,94 +689,37 @@ class WebThingServer:
                 [self.hostname, "{}:{}".format(self.hostname, self.port),]
             )
 
-        if isinstance(self.things, MultipleThings):
-            for idx, thing in enumerate(self.things.get_things()):
-                thing.set_href_prefix("{}/{}".format(self.base_path, idx))
-
-            handlers = [
-                [r"/?", ThingsHandler, dict(things=self.things, hosts=self.hosts),],
-                [
-                    r"/(?P<thing_id>\d+)/?",
-                    ThingHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/(?P<thing_id>\d+)/properties/?",
-                    PropertiesHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/(?P<thing_id>\d+)/properties/" + r"(?P<property_name>[^/]+)/?",
-                    PropertyHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/(?P<thing_id>\d+)/actions/?",
-                    ActionsHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/(?P<thing_id>\d+)/actions/(?P<action_name>[^/]+)/?",
-                    ActionHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/(?P<thing_id>\d+)/actions/"
-                    + r"(?P<action_name>[^/]+)/(?P<action_id>[^/]+)/?",
-                    ActionIDHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/(?P<thing_id>\d+)/events/?",
-                    EventsHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/(?P<thing_id>\d+)/events/(?P<event_name>[^/]+)/?",
-                    EventHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-            ]
-        else:
-            self.things.get_thing().set_href_prefix(self.base_path)
-            handlers = [
-                [r"/?", ThingHandler, dict(things=self.things, hosts=self.hosts),],
-                [
-                    r"/properties/?",
-                    PropertiesHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/properties/(?P<property_name>[^/]+)/?",
-                    PropertyHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/actions/?",
-                    ActionsHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/actions/(?P<action_name>[^/]+)/?",
-                    ActionHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/actions/(?P<action_name>[^/]+)/(?P<action_id>[^/]+)/?",
-                    ActionIDHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/events/?",
-                    EventsHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-                [
-                    r"/events/(?P<event_name>[^/]+)/?",
-                    EventHandler,
-                    dict(things=self.things, hosts=self.hosts),
-                ],
-            ]
+        self.thing.set_href_prefix(self.base_path)
+        handlers = [
+            [r"/?", ThingHandler, dict(thing=self.thing, hosts=self.hosts),],
+            [
+                r"/properties/?",
+                PropertiesHandler,
+                dict(thing=self.thing, hosts=self.hosts),
+            ],
+            [
+                r"/properties/(?P<property_name>[^/]+)/?",
+                PropertyHandler,
+                dict(thing=self.thing, hosts=self.hosts),
+            ],
+            [r"/actions/?", ActionsHandler, dict(thing=self.thing, hosts=self.hosts),],
+            [
+                r"/actions/(?P<action_name>[^/]+)/?",
+                ActionHandler,
+                dict(thing=self.thing, hosts=self.hosts),
+            ],
+            [
+                r"/actions/(?P<action_name>[^/]+)/(?P<action_id>[^/]+)/?",
+                ActionIDHandler,
+                dict(thing=self.thing, hosts=self.hosts),
+            ],
+            [r"/events/?", EventsHandler, dict(thing=self.thing, hosts=self.hosts),],
+            [
+                r"/events/(?P<event_name>[^/]+)/?",
+                EventHandler,
+                dict(thing=self.thing, hosts=self.hosts),
+            ],
+        ]
 
         if isinstance(additional_routes, list):
             handlers = additional_routes + handlers

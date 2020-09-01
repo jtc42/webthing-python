@@ -20,17 +20,25 @@ class Value(EventEmitter):
     reports a new value.
     """
 
-    def __init__(self, initial_value, value_forwarder=None):
+    def __init__(self, initial_value=None, read_forwarder=None, write_forwarder=None):
         """
         Initialize the object.
-
         initial_value -- the initial value
         value_forwarder -- the method that updates the actual value on the
                            thing
         """
         EventEmitter.__init__(self)
-        self.last_value = initial_value
-        self.value_forwarder = value_forwarder
+        self._value = initial_value
+        self.read_forwarder = read_forwarder
+        self.write_forwarder = write_forwarder
+
+    @property
+    def readonly(self):
+        return self.read_forwarder and not self.write_forwarder
+
+    @property
+    def writeonly(self):
+        return self.write_forwarder and not self.read_forwarder
 
     def set(self, value):
         """
@@ -38,14 +46,17 @@ class Value(EventEmitter):
 
         value -- value to set
         """
-        if self.value_forwarder is not None:
-            self.value_forwarder(value)
+        if self.write_forwarder is not None:
+            self.write_forwarder(value)
 
         self.notify_of_external_update(value)
+        return value
 
     def get(self):
         """Return the last known value from the underlying thing."""
-        return self.last_value
+        if self.read_forwarder:
+            self._value = self.read_forwarder()
+        return self._value
 
     def notify_of_external_update(self, value):
         """

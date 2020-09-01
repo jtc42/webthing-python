@@ -10,19 +10,32 @@ from .errors import PropertyError
 class Property:
     """A Property represents an individual state value of a thing."""
 
-    def __init__(self, thing, name, value, metadata=None):
+    def __init__(
+        self,
+        thing,
+        name,
+        initial_value=None,
+        writeproperty=None,
+        readproperty=None,
+        metadata=None,
+    ):
         """
         Initialize the object.
-
         thing -- the Thing this property belongs to
         name -- name of the property
-        value -- Value object to hold the property value
+        writeproperty -- Callable to pass value updates to
+        readproperty -- Callable to obtain the property value
         metadata -- property metadata, i.e. type, description, unit, etc.,
                     as a dict
         """
+        self.value = Value(
+            initial_value=initial_value,
+            read_forwarder=readproperty,
+            write_forwarder=writeproperty,
+        )
+
         self.thing = thing
         self.name = name
-        self.value = value
         self.href_prefix = ""
         self.href = "/properties/{}".format(self.name)
         self.metadata = metadata if metadata is not None else {}

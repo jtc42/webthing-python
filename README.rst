@@ -63,7 +63,7 @@ First we create a new Thing:
 
 Now we can add the required properties.
 
-The ``on`` property reports and sets the on/off state of the light. For this, we need to have a ``Value`` object which holds the actual state and also a method to turn the light on/off. For our purposes, we just want to log the new state if the light is switched on/off.
+The ``on`` property reports and sets the on/off state of the light. We can pass `writeproperty` argument pointing to a method to actually turn the light on/off. For our purposes, we just want to log the new state if the light is switched on/off.
 
 .. code:: python
 
@@ -158,9 +158,9 @@ Then we create and add the appropriate property:
                   'readOnly': True,
               }))
 
-In this example, we pass a `readproperty` function that will read and return the sensor value every time it is requested.
+In this example, we pass a `readproperty` method that will read and return the sensor value every time it is requested.
 
-Alternatively, we can create a thread that queries the physical sensor every few seconds. 
+Alternatively, we can create a thread that queries the physical sensor every few seconds. We first remove the `readproperty` argument from our Property.
 
   .. code:: python
 
@@ -178,6 +178,8 @@ Alternatively, we can create a thread that queries the physical sensor every few
                 'unit': 'percent',
                 'readOnly': True,
             }))
+
+We then create our looping function to periodically query the sensor and set the property value.
 
 .. code:: python
 

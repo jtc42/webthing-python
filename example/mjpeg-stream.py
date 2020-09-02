@@ -82,7 +82,7 @@ class StreamGenerator:
                 await self.event.wait()
                 # Get the current frame
                 img = self.stream.getvalue()
-                # Write the frame data to the Tornado client
+                # Add frame header data
                 served_image_timestamp = time.time()
                 prefix = (
                     my_boundary

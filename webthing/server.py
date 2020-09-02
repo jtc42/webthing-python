@@ -68,6 +68,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
         self.set_header("Content-Type", content_type)
 
+        # If the response data is a generator, handle it specially
         if isinstance(data, (typing.AsyncGenerator, types.GeneratorType)):
             self.set_header(
                 "Cache-Control",
@@ -87,9 +88,12 @@ class BaseHandler(tornado.web.RequestHandler):
                     self.write(frame)
                     # Write data to network
                     await self.flush()
+        # If the response data is not a generator
         else:
+            # If the response contentType is JSON, format data first
             if content_type == "application/json":
                 data = json.dumps(data)
+            # Write data
             self.write(data)
 
 

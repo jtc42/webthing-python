@@ -15,31 +15,25 @@ class Property:
         self,
         thing,
         name,
-        initial_value=None,
-        writeproperty=None,
-        readproperty=None,
+        value,
         metadata=None,
+        content_type="application/json",
     ):
         """
         Initialize the object.
         thing -- the Thing this property belongs to
         name -- name of the property
-        writeproperty -- Callable to pass value updates to
-        readproperty -- Callable to obtain the property value
+        value -- Value object to hold the property value
         metadata -- property metadata, i.e. type, description, unit, etc.,
                     as a dict
         """
-        self.value = Value(
-            initial_value=initial_value,
-            read_forwarder=readproperty,
-            write_forwarder=writeproperty,
-        )
-
+        self.value = value
         self.thing = thing
         self.name = name
         self.href_prefix = ""
         self.href = "/properties/{}".format(self.name)
         self.metadata = metadata if metadata is not None else {}
+        self.content_type = content_type
 
         # Add the property change observer to notify the Thing about a property
         # change.
@@ -67,6 +61,11 @@ class Property:
         """
         description = deepcopy(self.metadata)
 
+        # Imply readonly if not explicitly given
+        if "readOnly" not in description and self.value.readonly:
+            description["readOnly"] = True
+
+        # Create links
         if "links" not in description:
             description["links"] = []
 
@@ -76,6 +75,30 @@ class Property:
                 "href": self.href_prefix + self.href,
             }
         )
+
+        # Create forms
+        if "forms" not in description:
+            description["forms"] = []
+
+        description["forms"].append(
+            {
+                "op": "readproperty",
+                "href": self.href_prefix + self.href,
+                "contentType": self.content_type,
+                "htv:methodName": "GET",
+            }
+        )
+
+        if not description.get("readOnly", False):
+            description["forms"].append(
+                {
+                    "op": "writeproperty",
+                    "href": self.href_prefix + self.href,
+                    "contentType": self.content_type,
+                    "htv:methodName": "PUT",
+                }
+            )
+
         return description
 
     def set_href_prefix(self, prefix):
@@ -94,22 +117,22 @@ class Property:
         """
         return self.href_prefix + self.href
 
-    def get_value(self):
+    async def get_value(self):
         """
         Get the current property value.
 
         Returns the value.
         """
-        return self.value.get()
+        return await self.value.get()
 
-    def set_value(self, value):
+    async def set_value(self, value):
         """
         Set the current value of the property.
 
         value -- the value to set
         """
         self.validate_value(value)
-        self.value.set(value)
+        await self.value.set(value)
 
     def get_name(self):
         """
@@ -126,3 +149,7 @@ class Property:
     def get_metadata(self):
         """Get the metadata associated with this property."""
         return self.metadata
+
+    def get_content_type(self):
+        """Get the content type of this property."""
+        return self.content_type

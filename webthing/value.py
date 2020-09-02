@@ -1,6 +1,7 @@
 """An observable, settable value interface."""
 
 import sys
+import asyncio
 
 if sys.version_info.major == 3:
     from pyee import AsyncIOEventEmitter as EventEmitter
@@ -40,22 +41,28 @@ class Value(EventEmitter):
     def writeonly(self):
         return self.write_forwarder and not self.read_forwarder
 
-    def set(self, value):
+    async def set(self, value):
         """
         Set a new value for this thing.
 
         value -- value to set
         """
         if self.write_forwarder is not None:
-            self.write_forwarder(value)
+            if asyncio.iscoroutine(self.write_forwarder):
+                await self.write_forwarder(value)
+            else:
+                self.write_forwarder(value)
 
         self.notify_of_external_update(value)
         return value
 
-    def get(self):
+    async def get(self):
         """Return the last known value from the underlying thing."""
         if self.read_forwarder:
-            self._value = self.read_forwarder()
+            if asyncio.iscoroutine(self.read_forwarder):
+                self._value = await self.read_forwarder()
+            else:
+                self._value = self.read_forwarder()
         return self._value
 
     def notify_of_external_update(self, value):

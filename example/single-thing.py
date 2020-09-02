@@ -1,5 +1,5 @@
 from __future__ import division
-from webthing import Action, Event, Property, Thing, WebThingServer
+from webthing import Action, Event, Property, Value, Thing, WebThingServer
 import logging
 import time
 import uuid
@@ -24,7 +24,7 @@ def make_thing():
     on_property = Property(
         thing,
         "on",
-        initial_value=True,
+        Value(True, None, lambda x: print(x)),
         metadata={
             "@type": "OnOffProperty",
             "title": "On/Off",
@@ -36,7 +36,7 @@ def make_thing():
     brightness_property = Property(
         thing,
         "brightness",
-        initial_value=50,
+        Value(50, None, lambda x: print(x)),
         metadata={
             "@type": "BrightnessProperty",
             "title": "Brightness",
@@ -68,7 +68,7 @@ def make_thing():
     fade_action = Action(
         thing,
         "fade",
-        invokeaction=async_fade_function,
+        async_fade_function,
         metadata={
             "title": "Fade",
             "description": "Fade the lamp to a given level",

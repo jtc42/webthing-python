@@ -4,6 +4,9 @@ from zeroconf import ServiceInfo, Zeroconf
 import json
 import socket
 import sys
+import typing
+import types
+import asyncio
 import tornado.concurrent
 import tornado.gen
 import tornado.httpserver
@@ -55,6 +58,39 @@ class BaseHandler(tornado.web.RequestHandler):
     def options(self, *args, **kwargs):
         """Handle an OPTIONS request."""
         self.set_status(204)
+
+    async def represent_response(
+        self, data, content_type: str = "application/json", headers: dict = None
+    ):
+        headers = headers or {}
+        for k, v in headers:
+            self.set_header(k, v)
+
+        self.set_header("Content-Type", content_type)
+
+        if isinstance(data, (typing.AsyncGenerator, types.GeneratorType)):
+            self.set_header(
+                "Cache-Control",
+                "no-store, no-cache, must-revalidate, pre-check=0, post-check=0, max-age=0",
+            )
+            self.set_header("Pragma", "no-cache")
+
+            if isinstance(data, typing.AsyncGenerator):
+                async for frame in data:
+                    # Write data to memory
+                    self.write(frame)
+                    # Write data to network
+                    await self.flush()
+            elif isinstance(data, types.GeneratorType):
+                for frame in data:
+                    # Write data to memory
+                    self.write(frame)
+                    # Write data to network
+                    await self.flush()
+        else:
+            if content_type == "application/json":
+                data = json.dumps(data)
+            self.write(data)
 
 
 class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
@@ -299,7 +335,7 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
 class PropertiesHandler(BaseHandler):
     """Handle a request to /properties."""
 
-    def get(self):
+    async def get(self):
         """
         Handle a GET request.
         """
@@ -308,13 +344,13 @@ class PropertiesHandler(BaseHandler):
             return
 
         self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(self.thing.get_properties()))
+        self.write(json.dumps(await self.thing.get_properties()))
 
 
 class PropertyHandler(BaseHandler):
     """Handle a request to /properties/<property>."""
 
-    def get(self, property_name=None):
+    async def get(self, property_name=None):
         """
         Handle a GET request.
 
@@ -324,13 +360,14 @@ class PropertyHandler(BaseHandler):
             self.set_status(404)
             return
 
-        if self.thing.has_property(property_name):
-            self.set_header("Content-Type", "application/json")
-            self.write(json.dumps(self.thing.get_property(property_name)))
+        prop = self.thing.find_property(property_name)
+        if prop:
+            data = await self.thing.get_property(property_name)
+            await self.represent_response(data, prop.get_content_type())
         else:
             self.set_status(404)
 
-    def put(self, property_name=None):
+    async def put(self, property_name=None):
         """
         Handle a PUT request.
 
@@ -346,20 +383,15 @@ class PropertyHandler(BaseHandler):
             self.set_status(400)
             return
 
-        if self.thing.has_property(property_name):
+        prop = self.thing.find_property(property_name)
+        if prop:
             try:
-                self.thing.set_property(property_name, args)
+                await self.thing.set_property(property_name, args)
             except PropertyError:
                 self.set_status(400)
                 return
-
-            self.set_header("Content-Type", "application/json")
-            self.write(
-                json.dumps(
-                    {
-                        property_name: self.thing.get_property(property_name),
-                    }
-                )
+            await self.represent_response(
+                await self.thing.get_property(property_name), prop.get_content_type()
             )
         else:
             self.set_status(404)
@@ -368,7 +400,7 @@ class PropertyHandler(BaseHandler):
 class ActionsHandler(BaseHandler):
     """Handle a request to /actions."""
 
-    def get(self):
+    async def get(self):
         """
         Handle a GET request.
         """
@@ -376,10 +408,9 @@ class ActionsHandler(BaseHandler):
             self.set_status(404)
             return
 
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(self.thing.get_action_descriptions()))
+        await self.represent_response(self.thing.get_action_descriptions())
 
-    def post(self):
+    async def post(self):
         """
         Handle a POST request.
         """
@@ -412,7 +443,7 @@ class ActionsHandler(BaseHandler):
             tornado.ioloop.IOLoop.current().spawn_callback(action.start)
 
             self.set_status(201)
-            self.write(json.dumps(response))
+            await self.represent_response(response)
         else:
             self.set_status(400)
 
@@ -420,7 +451,7 @@ class ActionsHandler(BaseHandler):
 class ActionHandler(BaseHandler):
     """Handle a request to /actions/<action_name>."""
 
-    def get(self, action_name=None):
+    async def get(self, action_name=None):
         """
         Handle a GET request.
 
@@ -430,10 +461,11 @@ class ActionHandler(BaseHandler):
             self.set_status(404)
             return
 
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(self.thing.get_action_descriptions(action_name=action_name)))
+        await self.represent_response(
+            self.thing.get_action_descriptions(action_name=action_name)
+        )
 
-    def post(self, action_name=None):
+    async def post(self, action_name=None):
         """
         Handle a POST request.
         """
@@ -455,7 +487,7 @@ class ActionHandler(BaseHandler):
             tornado.ioloop.IOLoop.current().spawn_callback(action.start)
 
             self.set_status(201)
-            self.write(json.dumps(response))
+            await self.represent_response(response)
         else:
             self.set_status(400)
 
@@ -463,7 +495,7 @@ class ActionHandler(BaseHandler):
 class ActionIDHandler(BaseHandler):
     """Handle a request to /actions/<action_name>/<action_id>."""
 
-    def get(self, action_name=None, action_id=None):
+    async def get(self, action_name=None, action_id=None):
         """
         Handle a GET request.
 
@@ -479,10 +511,9 @@ class ActionIDHandler(BaseHandler):
             self.set_status(404)
             return
 
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(action.as_action_description()))
+        await self.represent_response(action.as_action_description())
 
-    def put(self,  action_name=None, action_id=None):
+    def put(self, action_name=None, action_id=None):
         """
         Handle a PUT request.
 
@@ -517,7 +548,7 @@ class ActionIDHandler(BaseHandler):
 class EventsHandler(BaseHandler):
     """Handle a request to /events."""
 
-    def get(self):
+    async def get(self):
         """
         Handle a GET request.
         """
@@ -525,14 +556,13 @@ class EventsHandler(BaseHandler):
             self.set_status(404)
             return
 
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(self.thing.get_event_descriptions()))
+        await self.represent_response(self.thing.get_event_descriptions())
 
 
 class EventHandler(BaseHandler):
     """Handle a request to /events/<event_name>."""
 
-    def get(self, event_name=None):
+    async def get(self, event_name=None):
         """
         Handle a GET request.
 
@@ -542,8 +572,9 @@ class EventHandler(BaseHandler):
             self.set_status(404)
             return
 
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(self.thing.get_event_descriptions(event_name=event_name)))
+        await self.represent_response(
+            self.thing.get_event_descriptions(event_name=event_name)
+        )
 
 
 class WebThingServer:

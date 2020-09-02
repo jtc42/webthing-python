@@ -248,7 +248,7 @@ class Thing:
         """
         return self.properties.get(property_name, None)
 
-    def get_property(self, property_name):
+    async def get_property(self, property_name):
         """
         Get a property's value.
 
@@ -258,17 +258,19 @@ class Thing:
         """
         prop = self.find_property(property_name)
         if prop:
-            return prop.get_value()
+            return await prop.get_value()
 
         return None
 
-    def get_properties(self):
+    async def get_properties(self):
         """
         Get a mapping of all properties and their values.
 
         Returns a dictionary of property_name -> value.
         """
-        return {prop.get_name(): prop.get_value() for prop in self.properties.values()}
+        return {
+            prop.get_name(): await prop.get_value() for prop in self.properties.values()
+        }
 
     def has_property(self, property_name):
         """
@@ -281,7 +283,7 @@ class Thing:
         """
         return property_name in self.properties
 
-    def set_property(self, property_name, value):
+    async def set_property(self, property_name, value):
         """
         Set a property value.
 
@@ -292,7 +294,7 @@ class Thing:
         if not prop:
             return
 
-        prop.set_value(value)
+        await prop.set_value(value)
 
     def get_action(self, action_name, action_id):
         """

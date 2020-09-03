@@ -3,16 +3,12 @@ from __future__ import division
 import asyncio
 import io
 import logging
-import os
-import pathlib
 import sys
-import time
-import uuid
 from datetime import datetime
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
-from webthing import Action, Event, Property, Thing, Value, WebThingServer
+from webthing import Property, Thing, Value, WebThingServer
 
 if (
     sys.version_info[0] == 3

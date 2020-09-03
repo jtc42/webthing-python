@@ -30,7 +30,7 @@ class ActionObject:
 
         self.href_prefix = ""
         self.href = "/actions/{}/{}".format(self.name, self.id)
-        self.status = "created"
+        self.status = "pending"
         self.time_requested = timestamp()
         self.time_completed = None
 
@@ -99,7 +99,7 @@ class ActionObject:
 
     async def start(self):
         """Start performing the action."""
-        self.status = "pending"
+        self.status = "running"
         self.thing.action_notify(self)
         # If the action function is async
         if asyncio.iscoroutinefunction(self.target_function):
@@ -168,7 +168,7 @@ class Action:
                     "href": {"type": "string", "format": "uri"},
                     "timeRequested": {"type": "string", "format": "date-time"},
                     "timeCompleted": {"type": "string", "format": "date-time"},
-                    "status": {"type": "string", "enum": ["created", "pending", "completed", "cancelled", "error"]},
+                    "status": {"type": "string", "enum": ["pending", "running", "completed", "cancelled", "error"]},
                     **({"output": self.output} if self.output else {}),
                     **({"input": self.input} if self.input else {}),
                 }

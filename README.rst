@@ -164,6 +164,7 @@ Alternatively, we can create a thread that queries the physical sensor every few
       Property(
           sensor,
           'level',
+          Value(0.0),
           metadata={
               '@type': 'LevelProperty',
               'title': 'Humidity',

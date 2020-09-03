@@ -1,6 +1,7 @@
 """An observable, settable value interface."""
 
 import sys
+import inspect
 import asyncio
 
 if sys.version_info.major == 3:
@@ -48,8 +49,10 @@ class Value(EventEmitter):
         value -- value to set
         """
         if self.write_forwarder is not None:
-            if asyncio.iscoroutine(self.write_forwarder):
+            if inspect.iscoroutinefunction(self.write_forwarder):
                 await self.write_forwarder(value)
+            if asyncio.iscoroutine(self.write_forwarder):
+                await self.write_forwarder
             else:
                 self.write_forwarder(value)
 
@@ -59,8 +62,10 @@ class Value(EventEmitter):
     async def get(self):
         """Return the last known value from the underlying thing."""
         if self.read_forwarder:
-            if asyncio.iscoroutine(self.read_forwarder):
+            if inspect.iscoroutinefunction(self.read_forwarder):
                 self._value = await self.read_forwarder()
+            elif asyncio.iscoroutine(self.read_forwarder):
+                self._value = await self.read_forwarder
             else:
                 self._value = self.read_forwarder()
         return self._value

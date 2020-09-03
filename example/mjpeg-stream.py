@@ -5,6 +5,7 @@ import io
 import logging
 import os
 import pathlib
+import sys
 import time
 import uuid
 from datetime import datetime
@@ -12,6 +13,13 @@ from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
 from webthing import Action, Event, Property, Thing, Value, WebThingServer
+
+if (
+    sys.version_info[0] == 3
+    and sys.version_info[1] >= 8
+    and sys.platform.startswith("win")
+):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 """
 PIL spams the logger with debug-level information. This is a pain when debugging api.app.
@@ -35,11 +43,7 @@ class StreamGenerator:
 
     def generate_new_dummy_image(self):
         # Create a dummy image to serve in the stream
-        image = Image.new(
-            "RGB",
-            (640, 480),
-            color=(0, 0, 0),
-        )
+        image = Image.new("RGB", (640, 480), color=(0, 0, 0),)
 
         draw = ImageDraw.Draw(image)
         draw.text(

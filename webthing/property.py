@@ -13,12 +13,7 @@ class Property:
     """A Property represents an individual state value of a thing."""
 
     def __init__(
-        self,
-        thing,
-        name,
-        value,
-        metadata=None,
-        content_type="application/json",
+        self, thing, name, value, metadata=None, content_type="application/json",
     ):
         """
         Initialize the object.

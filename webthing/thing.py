@@ -55,14 +55,8 @@ class Thing:
                     "rel": "properties",
                     "href": "{}/properties".format(self.href_prefix),
                 },
-                {
-                    "rel": "actions",
-                    "href": "{}/actions".format(self.href_prefix),
-                },
-                {
-                    "rel": "events",
-                    "href": "{}/events".format(self.href_prefix),
-                },
+                {"rel": "actions", "href": "{}/actions".format(self.href_prefix),},
+                {"rel": "events", "href": "{}/events".format(self.href_prefix),},
             ],
         }
 
@@ -77,11 +71,7 @@ class Thing:
 
         if self.ui_href is not None:
             thing["links"].append(
-                {
-                    "rel": "alternate",
-                    "mediaType": "text/html",
-                    "href": self.ui_href,
-                }
+                {"rel": "alternate", "mediaType": "text/html", "href": self.ui_href,}
             )
 
         if self.description:
@@ -190,7 +180,7 @@ class Thing:
 
         Returns the action descriptions.
         """
-        
+
         if action_name is None:
             descriptions = {}
             for name, action in self.actions.items():

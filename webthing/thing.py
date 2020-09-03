@@ -48,7 +48,7 @@ class Thing:
             "title": self.title,
             "@context": self.context,
             "properties": self.get_property_descriptions(),
-            "actions": {},
+            "actions": self.get_action_descriptions(),
             "events": {},
             "links": [
                 {
@@ -65,15 +65,6 @@ class Thing:
                 },
             ],
         }
-
-        for name, action in self.actions.items():
-            thing["actions"][name] = action.metadata
-            thing["actions"][name]["links"] = [
-                {
-                    "rel": "action",
-                    "href": "{}/actions/{}".format(self.href_prefix, name),
-                },
-            ]
 
         for name, event in self.available_events.items():
             thing["events"][name] = event["metadata"]
@@ -183,7 +174,15 @@ class Thing:
         """
         return {k: v.as_property_description() for k, v in self.properties.items()}
 
-    def get_action_descriptions(self, action_name=None):
+    def get_action_descriptions(self):
+        """
+        Get the thing's available actions as a dictionary.
+
+        Returns the actions as a dictionary, i.e. name -> description.
+        """
+        return {k: v.as_action_description() for k, v in self.actions.items()}
+
+    def get_action_object_descriptions(self, action_name=None):
         """
         Get the thing's action objects as an array.
 

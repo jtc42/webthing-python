@@ -436,7 +436,7 @@ class ActionsHandler(BaseHandler):
             self.set_status(404)
             return
 
-        await self.represent_response(self.thing.get_action_descriptions())
+        await self.represent_response(self.thing.get_action_object_descriptions())
 
     async def post(self):
         """
@@ -490,7 +490,7 @@ class ActionHandler(BaseHandler):
             return
 
         await self.represent_response(
-            self.thing.get_action_descriptions(action_name=action_name)
+            self.thing.get_action_object_descriptions(action_name=action_name)
         )
 
     async def post(self, action_name=None):
@@ -540,21 +540,6 @@ class ActionIDHandler(BaseHandler):
             return
 
         await self.represent_response(action.as_action_description())
-
-    def put(self, action_name=None, action_id=None):
-        """
-        Handle a PUT request.
-
-        TODO: this is not yet defined in the spec
-
-        action_name -- name of the action from the URL path
-        action_id -- the action ID from the URL path
-        """
-        if self.thing is None:
-            self.set_status(404)
-            return
-
-        self.set_status(200)
 
     def delete(self, action_name=None, action_id=None):
         """

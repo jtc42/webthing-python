@@ -1,5 +1,6 @@
 """High-level Action base class implementation."""
 
+from copy import deepcopy
 import uuid
 import asyncio
 from .utils import timestamp
@@ -17,6 +18,8 @@ class ActionObject:
         name -- name of the action
         input_ -- any action inputs
         """
+        self._task = None
+
         self.id = uuid.uuid4().hex
         self.thing = thing
         self.name = name
@@ -102,23 +105,29 @@ class ActionObject:
         self.thing.action_notify(self)
         # If the action function is async
         if asyncio.iscoroutinefunction(self.target_function):
-            # Await the action function
-            self.output = await self.target_function(self.input)
+            self._task = asyncio.ensure_future(self.target_function(self.input))
         # If the action function is not async
         else:
             # Run in the default ThreadPoolExecutor
-            self.output = await asyncio.get_event_loop().run_in_executor(
+            self._task = asyncio.get_event_loop().run_in_executor(
                 None, self.target_function, self.input
             )
-        self.finish()
+        self._task.add_done_callback(self.finish)
 
     def cancel(self):
-        # TODO: Implement coroutine cancellation
-        pass
+        if self._task:
+            self._task.cancel()
 
-    def finish(self):
+    def finish(self, future):
         """Finish performing the action."""
-        self.status = "completed"
+        try:
+            self.output = future.result()
+            self.status = "completed"
+        except asyncio.CancelledError:
+            self.status = "cancelled"
+        except Exception as e:
+            self.output = str(e)
+            self.status = "error"
         self.time_completed = timestamp()
         self.thing.action_notify(self)
 
@@ -136,6 +145,28 @@ class Action:
         self.invokeaction_forwarder = invokeaction or (lambda: None)
 
         self.queue = []
+
+    def as_action_description(self):
+        """
+        Get the action description.
+
+        Returns a dictionary describing the action.
+        """
+        description = deepcopy(self.metadata)
+
+        # Create forms
+        if "forms" not in description:
+            description["forms"] = []
+
+        description["forms"].append(
+            {
+                "op": "invokeaction",
+                "href": self.href_prefix + self.href,
+                "htv:methodName": "POST",
+            }
+        )
+
+        return description
 
     def invokeaction(self, input_):
         action_obj = ActionObject(

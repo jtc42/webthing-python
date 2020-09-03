@@ -65,17 +65,6 @@ class Property:
         if "readOnly" not in description and self.value.readonly:
             description["readOnly"] = True
 
-        # Create links
-        if "links" not in description:
-            description["links"] = []
-
-        description["links"].append(
-            {
-                "rel": "property",
-                "href": self.href_prefix + self.href,
-            }
-        )
-
         # Create forms
         if "forms" not in description:
             description["forms"] = []

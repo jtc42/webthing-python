@@ -6,6 +6,7 @@ import socket
 import sys
 import typing
 import types
+import logging
 import asyncio
 import tornado.concurrent
 import tornado.gen
@@ -13,6 +14,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+from tornado.iostream import StreamClosedError
 
 from .errors import PropertyError
 from .subscriber import Subscriber
@@ -59,6 +61,12 @@ class BaseHandler(tornado.web.RequestHandler):
         """Handle an OPTIONS request."""
         self.set_status(204)
 
+    async def write_and_flush(self, data):
+        # Write data to memory
+        self.write(data)
+        # Write data to network
+        await self.flush()
+
     async def represent_response(
         self, data, content_type: str = "application/json", headers: dict = None
     ):
@@ -78,16 +86,20 @@ class BaseHandler(tornado.web.RequestHandler):
 
             if isinstance(data, typing.AsyncGenerator):
                 async for frame in data:
-                    # Write data to memory
-                    self.write(frame)
                     # Write data to network
-                    await self.flush()
+                    try:
+                        await self.write_and_flush(frame)
+                    except StreamClosedError:
+                        logging.warning("Stream is closed")
+                        break
             elif isinstance(data, types.GeneratorType):
                 for frame in data:
-                    # Write data to memory
-                    self.write(frame)
                     # Write data to network
-                    await self.flush()
+                    try:
+                        await self.write_and_flush(frame)
+                    except StreamClosedError:
+                        logging.warning("Stream is closed")
+                        break
         # If the response data is not a generator
         else:
             # If the response contentType is JSON, format data first

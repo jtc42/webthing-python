@@ -41,21 +41,19 @@ class ActionObject:
         Returns a dictionary describing the action.
         """
         description = {
-            self.name: {
-                "href": self.href_prefix + self.href,
-                "timeRequested": self.time_requested,
-                "status": self.status,
-            },
+            "name": self.name,
+            "id": self.id,
+            "href": self.href_prefix + self.href,
+            "timeRequested": self.time_requested,
+            "timeCompleted": self.time_completed,
+            "status": self.status,
         }
 
         if self.input is not None:
-            description[self.name]["input"] = self.input
+            description["input"] = self.input
 
         if self.output is not None:
-            description[self.name]["output"] = self.output
-
-        if self.time_completed is not None:
-            description[self.name]["timeCompleted"] = self.time_completed
+            description["output"] = self.output
 
         return description
 
@@ -135,12 +133,15 @@ class ActionObject:
 class Action:
     """An Action represents a class of actions on a thing."""
 
-    def __init__(self, thing, name, invokeaction=None, metadata=None):
+    def __init__(self, thing, name, invokeaction=None, metadata=None, input_=None, output=None):
         self.thing = thing
         self.name = name
         self.href_prefix = ""
         self.href = "/actions/{}".format(self.name)
+
         self.metadata = metadata if metadata is not None else {}
+        self.input = input_ if input_ is not None else {}
+        self.output = output if output is not None else {}
 
         self.invokeaction_forwarder = invokeaction or (lambda: None)
 
@@ -153,6 +154,25 @@ class Action:
         Returns a dictionary describing the action.
         """
         description = deepcopy(self.metadata)
+
+        # Create WoT TD v1 input and output keys
+        if "input" not in description:
+            description["input"] = self.input
+
+        if "output" not in description:
+            description["output"] = {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "id": {"type": "string"},
+                    "href": {"type": "string", "format": "uri"},
+                    "timeRequested": {"type": "string", "format": "date-time"},
+                    "timeCompleted": {"type": "string", "format": "date-time"},
+                    "status": {"type": "string", "enum": ["created", "pending", "completed", "cancelled", "error"]},
+                    **({"output": self.output} if self.output else {}),
+                    **({"input": self.input} if self.input else {}),
+                }
+            }
 
         # Create forms
         if "forms" not in description:

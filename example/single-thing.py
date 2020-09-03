@@ -65,27 +65,30 @@ def make_thing():
         metadata={
             "title": "Fade",
             "description": "Fade the lamp to a given level",
-            "input": {
-                "type": "object",
-                "required": [
-                    "brightness",
-                    "duration",
-                ],
-                "properties": {
-                    "brightness": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 100,
-                        "unit": "percent",
-                    },
-                    "duration": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "unit": "milliseconds",
-                    },
+        },
+        input_ = {
+            "type": "object",
+            "required": [
+                "brightness",
+                "duration",
+            ],
+            "properties": {
+                "brightness": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "unit": "percent",
+                },
+                "duration": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "unit": "milliseconds",
                 },
             },
         },
+        output = {
+            "type": "string"
+        }
     )
 
     thing.add_action(fade_action)

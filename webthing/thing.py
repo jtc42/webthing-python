@@ -190,13 +190,15 @@ class Thing:
 
         Returns the action descriptions.
         """
-        descriptions = []
-
+        
         if action_name is None:
-            for action in self.actions.values():
+            descriptions = {}
+            for name, action in self.actions.items():
+                descriptions[name] = []
                 for action_obj in action.queue:
-                    descriptions.append(action_obj.as_action_description())
+                    descriptions[name].append(action_obj.as_action_description())
         elif action_name in self.actions:
+            descriptions = []
             for action_obj in self.actions[action_name].queue:
                 descriptions.append(action_obj.as_action_description())
 

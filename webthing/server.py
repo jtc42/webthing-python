@@ -22,12 +22,6 @@ from .utils import get_addresses, get_ip
 from .json import JSONEncoder
 
 
-@tornado.gen.coroutine
-def perform_action(action):
-    """Perform an Action in a coroutine."""
-    action.start()
-
-
 class BaseHandler(tornado.web.RequestHandler):
     """Base handler that is initialized with a thing."""
 

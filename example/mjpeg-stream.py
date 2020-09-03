@@ -94,6 +94,11 @@ class StreamGenerator:
                 # Delay by interval before checking for next frame
                 await asyncio.sleep(interval)
 
+    async def snapshot(self):
+        if not self.running:
+            self._start_runner()
+        await self.event.wait()
+        return self.stream.getvalue()
 
 def make_thing():
     stream_generator = StreamGenerator()
@@ -108,8 +113,21 @@ def make_thing():
     thing.add_property(
         Property(
             thing,
+            "snapshot",
+            Value(None, stream_generator.snapshot, None),
+            metadata={
+                "title": "Snapshot",
+                "readOnly": True
+            },
+            content_type="image/jpeg",
+        )
+    )
+
+    thing.add_property(
+        Property(
+            thing,
             "stream",
-            Value(stream_generator.stream_generator()),
+            Value(None, stream_generator.stream_generator, None),
             metadata={
                 "title": "Stream",
                 "readOnly": True

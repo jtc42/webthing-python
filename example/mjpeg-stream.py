@@ -50,9 +50,7 @@ class StreamGenerator:
         draw = ImageDraw.Draw(image)
         draw.text(
             (20, 70),
-            "Current time: {}".format(
-                datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
-            ),
+            "Current time: {}".format(datetime.now().strftime("%d/%m/%Y, %H:%M:%S")),
         )
 
         image.save(self.stream, format="JPEG")
@@ -100,6 +98,7 @@ class StreamGenerator:
         await self.event.wait()
         return self.stream.getvalue()
 
+
 def make_thing():
     stream_generator = StreamGenerator()
 
@@ -115,10 +114,7 @@ def make_thing():
             thing,
             "snapshot",
             Value(None, stream_generator.snapshot, None),
-            metadata={
-                "title": "Snapshot",
-                "readOnly": True
-            },
+            metadata={"title": "Snapshot", "readOnly": True},
             content_type="image/jpeg",
         )
     )
@@ -128,10 +124,7 @@ def make_thing():
             thing,
             "stream",
             Value(None, stream_generator.stream_generator, None),
-            metadata={
-                "title": "Stream",
-                "readOnly": True
-            },
+            metadata={"title": "Stream", "readOnly": True},
             content_type="multipart/x-mixed-replace;boundary=--boundarydonotcross",
         )
     )

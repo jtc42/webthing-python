@@ -63,7 +63,7 @@ First we create a new Thing:
 
 Now we can add the required properties.
 
-The ``on`` property reports and sets the on/off state of the light. We can pass `writeproperty` argument pointing to a method to actually turn the light on/off. For our purposes, we just want to log the new state if the light is switched on/off.
+The on property reports and sets the on/off state of the light. For this, we need to have a Value object which holds the actual state and also a method to turn the light on/off. For our purposes, we just want to log the new state if the light is switched on/off.
 
 .. code:: python
 
@@ -71,8 +71,7 @@ The ``on`` property reports and sets the on/off state of the light. We can pass 
       Property(
           light,
           'on',
-          initial_value=True,
-          writeproperty=lambda v: print('On-State is now', v),
+          Value(True, None, lambda x: print(x)),
           metadata={
               '@type': 'OnOffProperty',
               'title': 'On/Off',
@@ -88,8 +87,7 @@ The ``brightness`` property reports the brightness level of the light and sets t
       Property(
           light,
           'brightness',
-          initial_value=50,
-          writeproperty=lambda v: print('Brightness is now', v),
+          Value(50, None, lambda x: print(x)),
           metadata={
               '@type': 'BrightnessProperty',
               'title': 'Brightness',
@@ -144,7 +142,7 @@ Contrary to the light, the value cannot be set via an API call, as it wouldn't m
       Property(
           sensor,
           'level',
-          readproperty=self.read_from_gpio,
+          Value(None, self.read_from_gpio, None),
           metadata={
               '@type': 'LevelProperty',
               'title': 'Humidity',

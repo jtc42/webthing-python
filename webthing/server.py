@@ -1,13 +1,13 @@
 """Python Web Thing server implementation."""
 
-from zeroconf import ServiceInfo, Zeroconf
+import asyncio
 import json
+import logging
 import socket
 import sys
-import typing
 import types
-import logging
-import asyncio
+import typing
+
 import tornado.concurrent
 import tornado.gen
 import tornado.httpserver
@@ -15,11 +15,12 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 from tornado.iostream import StreamClosedError
+from zeroconf import ServiceInfo, Zeroconf
 
 from .errors import PropertyError
+from .json import JSONEncoder
 from .subscriber import Subscriber
 from .utils import get_addresses, get_ip
-from .json import JSONEncoder
 
 
 class BaseHandler(tornado.web.RequestHandler):

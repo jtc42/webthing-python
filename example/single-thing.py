@@ -1,9 +1,11 @@
 from __future__ import division
-from webthing import Action, Event, Property, Value, Thing, WebThingServer
+
+import asyncio
 import logging
 import time
 import uuid
-import asyncio
+
+from webthing import Action, Event, Property, Thing, Value, WebThingServer
 
 
 class OverheatedEvent(Event):
@@ -66,7 +68,7 @@ def make_thing():
             "title": "Fade",
             "description": "Fade the lamp to a given level",
         },
-        input_ = {
+        input_={
             "type": "object",
             "required": [
                 "brightness",
@@ -86,9 +88,7 @@ def make_thing():
                 },
             },
         },
-        output = {
-            "type": "string"
-        }
+        output={"type": "string"},
     )
 
     thing.add_action(fade_action)

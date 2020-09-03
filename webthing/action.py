@@ -1,8 +1,9 @@
 """High-level Action base class implementation."""
 
-from copy import deepcopy
-import uuid
 import asyncio
+import uuid
+from copy import deepcopy
+
 from .utils import timestamp
 
 
@@ -133,7 +134,9 @@ class ActionObject:
 class Action:
     """An Action represents a class of actions on a thing."""
 
-    def __init__(self, thing, name, invokeaction=None, metadata=None, input_=None, output=None):
+    def __init__(
+        self, thing, name, invokeaction=None, metadata=None, input_=None, output=None
+    ):
         self.thing = thing
         self.name = name
         self.href_prefix = ""
@@ -168,10 +171,19 @@ class Action:
                     "href": {"type": "string", "format": "uri"},
                     "timeRequested": {"type": "string", "format": "date-time"},
                     "timeCompleted": {"type": "string", "format": "date-time"},
-                    "status": {"type": "string", "enum": ["pending", "running", "completed", "cancelled", "error"]},
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "running",
+                            "completed",
+                            "cancelled",
+                            "error",
+                        ],
+                    },
                     **({"output": self.output} if self.output else {}),
                     **({"input": self.input} if self.input else {}),
-                }
+                },
             }
 
         # Create forms

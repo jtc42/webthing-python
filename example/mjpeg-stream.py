@@ -1,23 +1,17 @@
 from __future__ import division
-from webthing import (
-    Action,
-    Event,
-    Property,
-    Value,
-    Thing,
-    WebThingServer,
-)
-import logging
-import time
-import uuid
+
 import asyncio
-
 import io
-from datetime import datetime
-from PIL import Image, ImageFont, ImageDraw
-
+import logging
 import os
 import pathlib
+import time
+import uuid
+from datetime import datetime
+
+from PIL import Image, ImageDraw, ImageFont
+
+from webthing import Action, Event, Property, Thing, Value, WebThingServer
 
 """
 PIL spams the logger with debug-level information. This is a pain when debugging api.app.

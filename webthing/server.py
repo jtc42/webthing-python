@@ -19,6 +19,7 @@ from tornado.iostream import StreamClosedError
 from .errors import PropertyError
 from .subscriber import Subscriber
 from .utils import get_addresses, get_ip
+from .json import JSONEncoder
 
 
 @tornado.gen.coroutine
@@ -30,7 +31,7 @@ def perform_action(action):
 class BaseHandler(tornado.web.RequestHandler):
     """Base handler that is initialized with a thing."""
 
-    def initialize(self, thing, hosts):
+    def initialize(self, thing, hosts, json_encoder):
         """
         Initialize the handler.
 
@@ -39,6 +40,7 @@ class BaseHandler(tornado.web.RequestHandler):
         """
         self.thing = thing
         self.hosts = hosts
+        self.json_encoder = json_encoder
 
     def prepare(self):
         """Validate Host header."""
@@ -104,7 +106,7 @@ class BaseHandler(tornado.web.RequestHandler):
         else:
             # If the response contentType is JSON, format data first
             if content_type == "application/json":
-                data = json.dumps(data)
+                data = json.dumps(data, cls=self.json_encoder)
             # Write data
             self.write(data)
 
@@ -112,7 +114,7 @@ class BaseHandler(tornado.web.RequestHandler):
 class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
     """Handle a request to /."""
 
-    def initialize(self, thing, hosts):
+    def initialize(self, thing, hosts, json_encoder):
         """
         Initialize the handler.
 
@@ -121,6 +123,7 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
         """
         self.thing = thing
         self.hosts = hosts
+        self.json_encoder = json_encoder
 
     def prepare(self):
         """Validate Host header."""
@@ -182,7 +185,7 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
         }
         description["security"] = "nosec_sc"
 
-        self.write(json.dumps(description))
+        self.write(json.dumps(description, cls=self.json_encoder))
         self.finish()
 
     def open(self):
@@ -207,7 +210,8 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
                                 "status": "400 Bad Request",
                                 "message": "Parsing request failed",
                             },
-                        }
+                        },
+                        cls=self.json_encoder,
                     )
                 )
             except tornado.websocket.WebSocketClosedError:
@@ -225,7 +229,8 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
                                 "status": "400 Bad Request",
                                 "message": "Invalid message",
                             },
-                        }
+                        },
+                        cls=self.json_encoder,
                     )
                 )
             except tornado.websocket.WebSocketClosedError:
@@ -247,7 +252,8 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
                                     "status": "400 Bad Request",
                                     "message": str(e),
                                 },
-                            }
+                            },
+                            cls=self.json_encoder,
                         )
                     )
         elif msg_type == "requestAction":
@@ -269,7 +275,8 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
                                     "message": "Invalid action request",
                                     "request": message,
                                 },
-                            }
+                            },
+                            cls=self.json_encoder,
                         )
                     )
         elif msg_type == "addEventSubscription":
@@ -286,7 +293,8 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
                                 "message": "Unknown messageType: " + msg_type,
                                 "request": message,
                             },
-                        }
+                        },
+                        cls=self.json_encoder,
                     )
                 )
             except tornado.websocket.WebSocketClosedError:
@@ -312,7 +320,8 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
                 "data": {
                     property_.name: property_.get_value(),
                 },
-            }
+            },
+            cls=self.json_encoder,
         )
 
         self.write_message(message)
@@ -327,7 +336,8 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
             {
                 "messageType": "actionStatus",
                 "data": action.as_action_description(),
-            }
+            },
+            cls=self.json_encoder,
         )
 
         self.write_message(message)
@@ -342,7 +352,8 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
             {
                 "messageType": "event",
                 "data": event.as_event_description(),
-            }
+            },
+            cls=self.json_encoder,
         )
 
         self.write_message(message)
@@ -359,8 +370,9 @@ class PropertiesHandler(BaseHandler):
             self.set_status(404)
             return
 
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(await self.thing.get_properties()))
+        await self.represent_response(
+            await self.thing.get_properties(), "application/json"
+        )
 
 
 class PropertyHandler(BaseHandler):
@@ -605,6 +617,7 @@ class WebThingServer:
         additional_routes=None,
         base_path="",
         debug=False,
+        json_encoder=JSONEncoder,
     ):
         """
         Initialize the WebThingServer.
@@ -624,6 +637,8 @@ class WebThingServer:
         self.port = port
         self.hostname = hostname
         self.base_path = base_path.rstrip("/")
+
+        self.json_encoder = json_encoder
 
         system_hostname = socket.gethostname().lower()
         self.hosts = [
@@ -655,42 +670,58 @@ class WebThingServer:
             [
                 r"/?",
                 ThingHandler,
-                dict(thing=self.thing, hosts=self.hosts),
+                dict(
+                    thing=self.thing, hosts=self.hosts, json_encoder=self.json_encoder
+                ),
             ],
             [
                 r"/properties/?",
                 PropertiesHandler,
-                dict(thing=self.thing, hosts=self.hosts),
+                dict(
+                    thing=self.thing, hosts=self.hosts, json_encoder=self.json_encoder
+                ),
             ],
             [
                 r"/properties/(?P<property_name>[^/]+)/?",
                 PropertyHandler,
-                dict(thing=self.thing, hosts=self.hosts),
+                dict(
+                    thing=self.thing, hosts=self.hosts, json_encoder=self.json_encoder
+                ),
             ],
             [
                 r"/actions/?",
                 ActionsHandler,
-                dict(thing=self.thing, hosts=self.hosts),
+                dict(
+                    thing=self.thing, hosts=self.hosts, json_encoder=self.json_encoder
+                ),
             ],
             [
                 r"/actions/(?P<action_name>[^/]+)/?",
                 ActionHandler,
-                dict(thing=self.thing, hosts=self.hosts),
+                dict(
+                    thing=self.thing, hosts=self.hosts, json_encoder=self.json_encoder
+                ),
             ],
             [
                 r"/actions/(?P<action_name>[^/]+)/(?P<action_id>[^/]+)/?",
                 ActionIDHandler,
-                dict(thing=self.thing, hosts=self.hosts),
+                dict(
+                    thing=self.thing, hosts=self.hosts, json_encoder=self.json_encoder
+                ),
             ],
             [
                 r"/events/?",
                 EventsHandler,
-                dict(thing=self.thing, hosts=self.hosts),
+                dict(
+                    thing=self.thing, hosts=self.hosts, json_encoder=self.json_encoder
+                ),
             ],
             [
                 r"/events/(?P<event_name>[^/]+)/?",
                 EventHandler,
-                dict(thing=self.thing, hosts=self.hosts),
+                dict(
+                    thing=self.thing, hosts=self.hosts, json_encoder=self.json_encoder
+                ),
             ],
         ]
 

@@ -51,24 +51,17 @@ def make_thing():
     thing.add_property(on_property)
     thing.add_property(brightness_property)
 
-    async def async_fade_function(args):
+    async def fade_function(args):
         print("Starting fade function")
         await asyncio.sleep(args["duration"] / 1000)
-        brightness_property.set_value(args["brightness"])
-        print("Finished fade function")
-        return "Return value"
-
-    def fade_function(args):
-        print("Starting fade function")
-        time.sleep(args["duration"] / 1000)
-        brightness_property.set_value(args["brightness"])
+        await brightness_property.set_value(args["brightness"])
         print("Finished fade function")
         return "Return value"
 
     fade_action = Action(
         thing,
         "fade",
-        async_fade_function,
+        fade_function,
         metadata={
             "title": "Fade",
             "description": "Fade the lamp to a given level",

@@ -8,7 +8,7 @@ from datetime import datetime
 
 from PIL import Image, ImageDraw
 
-from webthing import Property, Thing, Value, WebThingServer
+from thingserver import Property, Thing, Value, WebThingServer
 
 if (
     sys.version_info[0] == 3

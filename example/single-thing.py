@@ -6,7 +6,7 @@ import sys
 import time
 import uuid
 
-from webthing import Action, Event, Property, Thing, Value, WebThingServer
+from thingserver import Action, Event, Property, Thing, Value, WebThingServer
 
 if (
     sys.version_info[0] == 3

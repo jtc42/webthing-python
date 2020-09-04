@@ -51,7 +51,21 @@ Now we can add the required properties.
 
 The on property reports and sets the on/off state of the light. For
 this, we need to have a Value object which holds the actual state and
-also a method to turn the light on/off. For our purposes, we just want
+also a method to turn the light on/off. 
+
+A `Value` object takes 3 main arguments: an initial value, 
+an optional read function, and an optional write function.
+If no read/write functions are provided, the Value will store
+hold it's return value internally, and supports reading and writing
+from the web API.
+If a read function is given, this will be called to update the internal
+return value every time the Value's `get` method is called.
+If a write function is given, the new value will be forwarded to it as
+an argument whenever the Value's `set` method is called.
+These functions can be used to read and write Values to physical
+hardware, or for logging and data processing.
+
+For our purposes, we just want
 to log the new state if the light is switched on/off.
 
 ```python

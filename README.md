@@ -7,7 +7,7 @@
 
 
 Implementation of an HTTP [Web Thing](https://iot.mozilla.org/wot/).
-This library is compatible with Python 3.5+.
+This library is compatible with Python 3.6+.
 
 ## Installation
 

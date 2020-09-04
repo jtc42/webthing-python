@@ -27,13 +27,15 @@ pil_logger.setLevel(logging.INFO)
 
 
 class StreamGenerator:
+    """An example image streamer class"""
     def __init__(self):
-        self.stream = io.BytesIO()
-        self.running = False
-        self.event = asyncio.Event()
+        self.stream = io.BytesIO()  # Byte stream to hold the latest JPEG frame
+        self.running = False  # Is the stream frame generator running
+        self.event = asyncio.Event()  # Event to signal a new frame is ready
 
     def _start_runner(self):
         print("Starting frame runner")
+        # Run frame generator loop in a coroutine task
         task = asyncio.create_task(self.frame_loop())
         self.running = True
         return task
@@ -48,11 +50,14 @@ class StreamGenerator:
             "Current time: {}".format(datetime.now().strftime("%d/%m/%Y, %H:%M:%S")),
         )
 
+        # Save new image to the stream
         image.save(self.stream, format="JPEG")
 
     async def frame_loop(self):
         while True:
-            await asyncio.sleep(1)  # Only serve frames at 1fps
+            # Only serve frames at 1fps
+            await asyncio.sleep(1)
+            # Signal we're in the middle of writing a new frame
             self.event.clear()
             # Reset stream
             self.stream.seek(0)
@@ -60,6 +65,7 @@ class StreamGenerator:
 
             # Generate new dumm image
             self.generate_new_dummy_image()
+            # Signal a new frame is ready
             self.event.set()
 
     async def stream_generator(self):

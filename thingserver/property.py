@@ -1,35 +1,39 @@
 """High-level Property base class implementation."""
 
 from copy import deepcopy
+
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 
 from .errors import PropertyError
+from .value import Value
 
 
 class Property:
     """A Property represents an individual state value of a thing."""
 
-    def __init__(self, thing, name, value, metadata=None):
+    def __init__(
+        self, thing, name, value, metadata=None, content_type="application/json",
+    ):
         """
         Initialize the object.
-
         thing -- the Thing this property belongs to
         name -- name of the property
         value -- Value object to hold the property value
         metadata -- property metadata, i.e. type, description, unit, etc.,
                     as a dict
         """
+        self.value = value
         self.thing = thing
         self.name = name
-        self.value = value
-        self.href_prefix = ''
-        self.href = '/properties/{}'.format(self.name)
+        self.href_prefix = ""
+        self.href = "/properties/{}".format(self.name)
         self.metadata = metadata if metadata is not None else {}
+        self.content_type = content_type
 
         # Add the property change observer to notify the Thing about a property
         # change.
-        self.value.on('update', lambda _: self.thing.property_notify(self))
+        self.value.on("update", lambda _: self.thing.property_notify(self))
 
     def validate_value(self, value):
         """
@@ -37,13 +41,13 @@ class Property:
 
         value -- New value
         """
-        if 'readOnly' in self.metadata and self.metadata['readOnly']:
-            raise PropertyError('Read-only property')
+        if "readOnly" in self.metadata and self.metadata["readOnly"]:
+            raise PropertyError("Read-only property")
 
         try:
             validate(value, self.metadata)
         except ValidationError:
-            raise PropertyError('Invalid property value')
+            raise PropertyError("Invalid property value")
 
     def as_property_description(self):
         """
@@ -53,15 +57,33 @@ class Property:
         """
         description = deepcopy(self.metadata)
 
-        if 'links' not in description:
-            description['links'] = []
+        # Imply readonly if not explicitly given
+        if "readOnly" not in description and self.value.readonly:
+            description["readOnly"] = True
 
-        description['links'].append(
+        # Create forms
+        if "forms" not in description:
+            description["forms"] = []
+
+        description["forms"].append(
             {
-                'rel': 'property',
-                'href': self.href_prefix + self.href,
+                "op": "readproperty",
+                "href": self.href_prefix + self.href,
+                "contentType": self.content_type,
+                "htv:methodName": "GET",
             }
         )
+
+        if not description.get("readOnly", False):
+            description["forms"].append(
+                {
+                    "op": "writeproperty",
+                    "href": self.href_prefix + self.href,
+                    "contentType": self.content_type,
+                    "htv:methodName": "PUT",
+                }
+            )
+
         return description
 
     def set_href_prefix(self, prefix):
@@ -80,22 +102,22 @@ class Property:
         """
         return self.href_prefix + self.href
 
-    def get_value(self):
+    async def get_value(self):
         """
         Get the current property value.
 
         Returns the value.
         """
-        return self.value.get()
+        return await self.value.get()
 
-    def set_value(self, value):
+    async def set_value(self, value):
         """
         Set the current value of the property.
 
         value -- the value to set
         """
         self.validate_value(value)
-        self.value.set(value)
+        await self.value.set(value)
 
     def get_name(self):
         """
@@ -112,3 +134,7 @@ class Property:
     def get_metadata(self):
         """Get the metadata associated with this property."""
         return self.metadata
+
+    def get_content_type(self):
+        """Get the content type of this property."""
+        return self.content_type

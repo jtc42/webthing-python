@@ -1,8 +1,9 @@
 """Utility functions."""
 
 import datetime
-import ifaddr
 import socket
+
+import ifaddr
 
 
 def timestamp():
@@ -11,7 +12,7 @@ def timestamp():
 
     Returns the current time in the form YYYY-mm-ddTHH:MM:SS+00:00
     """
-    return datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S+00:00')
+    return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
 def get_ip():
@@ -22,10 +23,10 @@ def get_ip():
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        s.connect(('10.255.255.255', 1))
+        s.connect(("10.255.255.255", 1))
         ip = s.getsockname()[0]
     except (socket.error, IndexError):
-        ip = '127.0.0.1'
+        ip = "127.0.0.1"
     finally:
         s.close()
 
@@ -46,14 +47,14 @@ def get_addresses():
             if addr.is_IPv4:
                 ip = addr.ip
 
-                if not ip.startswith('169.254.'):
+                if not ip.startswith("169.254."):
                     addresses.add(ip)
             elif addr.is_IPv6:
                 # Sometimes, IPv6 addresses will have the interface name
                 # appended, e.g. %eth0. Handle that.
-                ip = addr.ip[0].split('%')[0].lower()
+                ip = addr.ip[0].split("%")[0].lower()
 
-                if not ip.startswith('fe80:'):
-                    addresses.add('[{}]'.format(ip))
+                if not ip.startswith("fe80:"):
+                    addresses.add("[{}]".format(ip))
 
     return sorted(list(addresses))

@@ -8,7 +8,7 @@ webthing
 .. image:: https://img.shields.io/badge/license-MPL--2.0-blue.svg
     :target: https://github.com/mozilla-iot/webthing-python/blob/master/LICENSE.txt
 
-Implementation of an HTTP `Web Thing <https://iot.mozilla.org/wot/>`_. This library is compatible with Python 2.7 and 3.5+.
+Implementation of an HTTP `Web Thing <https://iot.mozilla.org/wot/>`_. This library is compatible with Python 3.5+.
 
 Installation
 ============
@@ -63,7 +63,7 @@ First we create a new Thing:
 
 Now we can add the required properties.
 
-The ``on`` property reports and sets the on/off state of the light. For this, we need to have a ``Value`` object which holds the actual state and also a method to turn the light on/off. For our purposes, we just want to log the new state if the light is switched on/off.
+The on property reports and sets the on/off state of the light. For this, we need to have a Value object which holds the actual state and also a method to turn the light on/off. For our purposes, we just want to log the new state if the light is switched on/off.
 
 .. code:: python
 
@@ -71,7 +71,7 @@ The ``on`` property reports and sets the on/off state of the light. For this, we
       Property(
           light,
           'on',
-          Value(True, lambda v: print('On-State is now', v)),
+          Value(True, None, lambda x: print(x)),
           metadata={
               '@type': 'OnOffProperty',
               'title': 'On/Off',
@@ -87,7 +87,7 @@ The ``brightness`` property reports the brightness level of the light and sets t
       Property(
           light,
           'brightness',
-          Value(50, lambda v: print('Brightness is now', v)),
+          Value(50, None, lambda x: print(x)),
           metadata={
               '@type': 'BrightnessProperty',
               'title': 'Brightness',
@@ -102,9 +102,7 @@ Now we can add our newly created thing to the server and start it:
 
 .. code:: python
 
-  # If adding more than one thing, use MultipleThings() with a name.
-  # In the single thing case, the thing's name will be broadcast.
-  server = WebThingServer(SingleThing(light), port=8888)
+  server = WebThingServer(light, port=8888)
 
   try:
       server.start()
@@ -134,33 +132,51 @@ First we create a new Thing:
        'A web connected humidity sensor'
   )
 
-Then we create and add the appropriate property:
+Then we create and add the appropriate property.
 
-* ``level``: tells us what the sensor is actually reading
+Contrary to the light, the value cannot be set via an API call, as it wouldn't make much sense, to SET what a sensor is reading. Therefore, we are creating a **readOnly** property.
 
-  - Contrary to the light, the value cannot be set via an API call, as it wouldn't make much sense, to SET what a sensor is reading. Therefore, we are creating a **readOnly** property.
+.. code:: python
 
-    .. code:: python
+  sensor.add_property(
+      Property(
+          sensor,
+          'level',
+          Value(None, self.read_from_gpio, None),
+          metadata={
+              '@type': 'LevelProperty',
+              'title': 'Humidity',
+              'type': 'number',
+              'description': 'The current humidity in %',
+              'minimum': 0,
+              'maximum': 100,
+              'unit': 'percent',
+              'readOnly': True,
+          }))
 
-      level = Value(0.0);
+In this example, we pass a `readproperty` method that will read and return the sensor value every time it is requested.
 
-      sensor.add_property(
-          Property(
-              sensor,
-              'level',
-              level,
-              metadata={
-                  '@type': 'LevelProperty',
-                  'title': 'Humidity',
-                  'type': 'number',
-                  'description': 'The current humidity in %',
-                  'minimum': 0,
-                  'maximum': 100,
-                  'unit': 'percent',
-                  'readOnly': True,
-              }))
+Alternatively, we can create a thread that queries the physical sensor every few seconds. We first remove the `readproperty` argument from our Property.
 
-Now we have a sensor that constantly reports 0%. To make it usable, we need a thread or some kind of input when the sensor has a new reading available. For this purpose we start a thread that queries the physical sensor every few seconds. For our purposes, it just calls a fake method.
+.. code:: python
+
+  sensor.add_property(
+      Property(
+          sensor,
+          'level',
+          Value(0.0),
+          metadata={
+              '@type': 'LevelProperty',
+              'title': 'Humidity',
+              'type': 'number',
+              'description': 'The current humidity in %',
+              'minimum': 0,
+              'maximum': 100,
+              'unit': 'percent',
+              'readOnly': True,
+          }))
+
+We then create our looping function to periodically query the sensor and set the property value.
 
 .. code:: python
 
@@ -171,13 +187,12 @@ Now we have a sensor that constantly reports 0%. To make it usable, we need a th
       try:
           while True:
               await sleep(3)
-              new_level = self.read_from_gpio()
+              sensor.properties["level"].value.set(self.read_from_gpio())
               logging.debug('setting new humidity level: %s', new_level)
-              self.level.notify_of_external_update(new_level)
       except CancelledError:
           pass
 
-This will update our ``Value`` object with the sensor readings via the ``self.level.notify_of_external_update(read_from_gpio())`` call. The ``Value`` object now notifies the property and the thing that the value has changed, which in turn notifies all websocket listeners.
+This will update our ``Value`` object with the sensor readings via the ``sensor.properties["level"].value.set(self.read_from_gpio())`` call. The ``Value`` object now notifies the property and the thing that the value has changed, which in turn notifies all websocket listeners.
 
 Adding to Gateway
 =================

@@ -7,7 +7,7 @@ from jsonschema.exceptions import ValidationError
 class Thing:
     """A Web Thing."""
 
-    def __init__(self, id_, title, type_=[], description=''):
+    def __init__(self, id_, title, type_=[], description=""):
         """
         Initialize the object.
 
@@ -20,18 +20,22 @@ class Thing:
             type_ = [type_]
 
         self.id = id_
-        self.context = 'https://iot.mozilla.org/schemas'
+        self.context = "https://www.w3.org/2019/wot/td/v1"
         self.type = type_
         self.title = title
         self.description = description
         self.properties = {}
-        self.available_actions = {}
-        self.available_events = {}
         self.actions = {}
+        self.available_events = {}
         self.events = []
         self.subscribers = set()
-        self.href_prefix = ''
+        self.href_prefix = ""
         self.ui_href = None
+
+    def add_context(self, context):
+        if isinstance(self.context, str):
+            self.context = [self.context]
+        self.context.append(context)
 
     def as_thing_description(self):
         """
@@ -40,58 +44,41 @@ class Thing:
         Returns the state as a dictionary.
         """
         thing = {
-            'id': self.id,
-            'title': self.title,
-            '@context': self.context,
-            'properties': self.get_property_descriptions(),
-            'actions': {},
-            'events': {},
-            'links': [
+            "id": self.id,
+            "title": self.title,
+            "@context": self.context,
+            "properties": self.get_property_descriptions(),
+            "actions": self.get_action_descriptions(),
+            "events": {},
+            "links": [
                 {
-                    'rel': 'properties',
-                    'href': '{}/properties'.format(self.href_prefix),
+                    "rel": "properties",
+                    "href": "{}/properties".format(self.href_prefix),
                 },
-                {
-                    'rel': 'actions',
-                    'href': '{}/actions'.format(self.href_prefix),
-                },
-                {
-                    'rel': 'events',
-                    'href': '{}/events'.format(self.href_prefix),
-                },
+                {"rel": "actions", "href": "{}/actions".format(self.href_prefix),},
+                {"rel": "events", "href": "{}/events".format(self.href_prefix),},
             ],
         }
 
-        for name, action in self.available_actions.items():
-            thing['actions'][name] = action['metadata']
-            thing['actions'][name]['links'] = [
-                {
-                    'rel': 'action',
-                    'href': '{}/actions/{}'.format(self.href_prefix, name),
-                },
-            ]
-
         for name, event in self.available_events.items():
-            thing['events'][name] = event['metadata']
-            thing['events'][name]['links'] = [
+            thing["events"][name] = event["metadata"]
+            thing["events"][name]["links"] = [
                 {
-                    'rel': 'event',
-                    'href': '{}/events/{}'.format(self.href_prefix, name),
+                    "rel": "event",
+                    "href": "{}/events/{}".format(self.href_prefix, name),
                 },
             ]
 
         if self.ui_href is not None:
-            thing['links'].append({
-                'rel': 'alternate',
-                'mediaType': 'text/html',
-                'href': self.ui_href,
-            })
+            thing["links"].append(
+                {"rel": "alternate", "mediaType": "text/html", "href": self.ui_href,}
+            )
 
         if self.description:
-            thing['description'] = self.description
+            thing["description"] = self.description
 
         if self.type:
-            thing['@type'] = self.type
+            thing["@type"] = self.type
 
         return thing
 
@@ -100,7 +87,7 @@ class Thing:
         if self.href_prefix:
             return self.href_prefix
 
-        return '/'
+        return "/"
 
     def get_ui_href(self):
         """Get the UI href."""
@@ -118,8 +105,8 @@ class Thing:
             property_.set_href_prefix(prefix)
 
         for action_name in self.actions.keys():
-            for action in self.actions[action_name]:
-                action.set_href_prefix(prefix)
+            for action_obj in self.actions[action_name].queue:
+                action_obj.set_href_prefix(prefix)
 
     def set_ui_href(self, href):
         """
@@ -175,26 +162,35 @@ class Thing:
 
         Returns the properties as a dictionary, i.e. name -> description.
         """
-        return {k: v.as_property_description()
-                for k, v in self.properties.items()}
+        return {k: v.as_property_description() for k, v in self.properties.items()}
 
-    def get_action_descriptions(self, action_name=None):
+    def get_action_descriptions(self):
         """
-        Get the thing's actions as an array.
+        Get the thing's available actions as a dictionary.
+
+        Returns the actions as a dictionary, i.e. name -> description.
+        """
+        return {k: v.as_action_description() for k, v in self.actions.items()}
+
+    def get_action_object_descriptions(self, action_name=None):
+        """
+        Get the thing's action objects as an array.
 
         action_name -- Optional action name to get descriptions for
 
         Returns the action descriptions.
         """
-        descriptions = []
 
         if action_name is None:
-            for name in self.actions:
-                for action in self.actions[name]:
-                    descriptions.append(action.as_action_description())
+            descriptions = {}
+            for name, action in self.actions.items():
+                descriptions[name] = []
+                for action_obj in action.queue:
+                    descriptions[name].append(action_obj.as_action_description())
         elif action_name in self.actions:
-            for action in self.actions[action_name]:
-                descriptions.append(action.as_action_description())
+            descriptions = []
+            for action_obj in self.actions[action_name].queue:
+                descriptions.append(action_obj.as_action_description())
 
         return descriptions
 
@@ -209,8 +205,11 @@ class Thing:
         if event_name is None:
             return [e.as_event_description() for e in self.events]
         else:
-            return [e.as_event_description()
-                    for e in self.events if e.get_name() == event_name]
+            return [
+                e.as_event_description()
+                for e in self.events
+                if e.get_name() == event_name
+            ]
 
     def add_property(self, property_):
         """
@@ -240,7 +239,7 @@ class Thing:
         """
         return self.properties.get(property_name, None)
 
-    def get_property(self, property_name):
+    async def get_property(self, property_name):
         """
         Get a property's value.
 
@@ -250,18 +249,19 @@ class Thing:
         """
         prop = self.find_property(property_name)
         if prop:
-            return prop.get_value()
+            return await prop.get_value()
 
         return None
 
-    def get_properties(self):
+    async def get_properties(self):
         """
         Get a mapping of all properties and their values.
 
         Returns a dictionary of property_name -> value.
         """
-        return {prop.get_name(): prop.get_value()
-                for prop in self.properties.values()}
+        return {
+            prop.get_name(): await prop.get_value() for prop in self.properties.values()
+        }
 
     def has_property(self, property_name):
         """
@@ -274,7 +274,7 @@ class Thing:
         """
         return property_name in self.properties
 
-    def set_property(self, property_name, value):
+    async def set_property(self, property_name, value):
         """
         Set a property value.
 
@@ -285,23 +285,21 @@ class Thing:
         if not prop:
             return
 
-        prop.set_value(value)
+        await prop.set_value(value)
 
     def get_action(self, action_name, action_id):
         """
         Get an action.
-
         action_name -- name of the action
         action_id -- ID of the action
-
         Returns the requested action if found, else None.
         """
         if action_name not in self.actions:
             return None
 
-        for action in self.actions[action_name]:
-            if action.id == action_id:
-                return action
+        for action_obj in self.actions[action_name].queue:
+            if action_obj.id == action_id:
+                return action_obj
 
         return None
 
@@ -325,35 +323,34 @@ class Thing:
             metadata = {}
 
         self.available_events[name] = {
-            'metadata': metadata,
-            'subscribers': set(),
+            "metadata": metadata,
+            "subscribers": set(),
         }
 
-    def perform_action(self, action_name, input_=None):
+    def init_action(self, action_name, input_=None):
         """
-        Perform an action on the thing.
+        Initialise an action on the thing, without starting it
 
         action_name -- name of the action
         input_ -- any action inputs
 
         Returns the action that was created.
         """
-        if action_name not in self.available_actions:
+        if action_name not in self.actions:
             return None
 
-        action_type = self.available_actions[action_name]
+        action = self.actions[action_name]
 
-        if 'input' in action_type['metadata']:
+        if "input" in action.metadata:
             try:
-                validate(input_, action_type['metadata']['input'])
+                validate(input_, action.metadata["input"])
             except ValidationError:
                 return None
 
-        action = action_type['class'](self, input_=input_)
-        action.set_href_prefix(self.href_prefix)
-        self.action_notify(action)
-        self.actions[action_name].append(action)
-        return action
+        action_obj = action.invokeaction(input_)
+        action_obj.set_href_prefix(self.href_prefix)
+        self.action_notify(action_obj)
+        return action_obj
 
     def remove_action(self, action_name, action_id):
         """
@@ -364,30 +361,19 @@ class Thing:
 
         Returns a boolean indicating the presence of the action.
         """
-        action = self.get_action(action_name, action_id)
-        if action is None:
+        action_obj = self.get_action(action_name, action_id)
+        if action_obj is None:
             return False
 
-        action.cancel()
-        self.actions[action_name].remove(action)
+        action_obj.cancel()
         return True
 
-    def add_available_action(self, name, metadata, cls):
+    def add_action(self, action):
         """
         Add an available action.
-
-        name -- name of the action
-        metadata -- action metadata, i.e. type, description, etc., as a dict
-        cls -- class to instantiate for this action
+        action -- Action instance
         """
-        if metadata is None:
-            metadata = {}
-
-        self.available_actions[name] = {
-            'metadata': metadata,
-            'class': cls,
-        }
-        self.actions[name] = []
+        self.actions[action.name] = action
 
     def add_subscriber(self, subscriber):
         """
@@ -417,7 +403,7 @@ class Thing:
         :param subscriber: Subscriber
         """
         if name in self.available_events:
-            self.available_events[name]['subscribers'].add(subscriber)
+            self.available_events[name]["subscribers"].add(subscriber)
 
     def remove_event_subscriber(self, name, subscriber):
         """
@@ -426,9 +412,11 @@ class Thing:
         :param name: Name of the event
         :param subscriber: Subscriber
         """
-        if name in self.available_events and \
-                subscriber in self.available_events[name]['subscribers']:
-            self.available_events[name]['subscribers'].remove(subscriber)
+        if (
+            name in self.available_events
+            and subscriber in self.available_events[name]["subscribers"]
+        ):
+            self.available_events[name]["subscribers"].remove(subscriber)
 
     def property_notify(self, property_):
         """
@@ -439,14 +427,14 @@ class Thing:
         for subscriber in list(self.subscribers):
             subscriber.update_property(property_)
 
-    def action_notify(self, action):
+    def action_notify(self, action_obj):
         """
         Notify all subscribers of an action status change.
 
         :param action: The action whose status changed
         """
         for subscriber in list(self.subscribers):
-            subscriber.update_action(action)
+            subscriber.update_action(action_obj)
 
     def event_notify(self, event):
         """
@@ -457,5 +445,5 @@ class Thing:
         if event.name not in self.available_events:
             return
 
-        for subscriber in self.available_events[event.name]['subscribers']:
+        for subscriber in self.available_events[event.name]["subscribers"]:
             subscriber.update_event(event)

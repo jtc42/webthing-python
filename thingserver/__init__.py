@@ -4,7 +4,7 @@
 from .action import Action
 from .event import Event
 from .property import Property
-from .server import MultipleThings, SingleThing, WebThingServer
+from .server import WebThingServer
 from .subscriber import Subscriber
 from .thing import Thing
 from .value import Value

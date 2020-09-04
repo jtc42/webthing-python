@@ -40,10 +40,10 @@ First we create a new Thing:
 
 ```python
 light = Thing(
-    'urn:dev:ops:my-lamp-1234',
-    'My Lamp',
-    ['OnOffSwitch', 'Light'],
-    'A web connected lamp'
+    'urn:dev:ops:my-lamp-1234',  # Thing ID
+    'My Lamp',  # Thing name
+    ['OnOffSwitch', 'Light'],  # Thing @type capabilities
+    'A web connected lamp'  # Thing description
 )
 ```
 
@@ -73,7 +73,11 @@ light.add_property(
     Property(
         light,
         'on',
-        Value(True, None, lambda x: print(x)),
+        Value(
+            True,  # Initial value
+            None,  # Read forwarder
+            lambda x: print(x)  # Write forwarder
+        ),
         metadata={
             '@type': 'OnOffProperty',
             'title': 'On/Off',

@@ -2,7 +2,7 @@
 name = "thingserver"
 version = "0.2.0"
 description = "HTTP Web Thing implementation"
-readme = "README.rst"
+readme = "README.md"
 authors = ["Joel Collins <joel@jtcollins.net>", "Mozilla IoT <iot@mozilla.com>"]
 license = "MPL-2.0"
 classifiers=[

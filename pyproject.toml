@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "thingserver"
-version = "0.2.0"
+version = "0.2.1"
 description = "HTTP Web Thing implementation"
 readme = "README.md"
 authors = ["Joel Collins <joel@jtcollins.net>", "Mozilla IoT <iot@mozilla.com>"]

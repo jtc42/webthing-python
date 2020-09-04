@@ -13,7 +13,7 @@ This library is compatible with Python 3.6+.
 
 `thingserver` can be installed via `pip`, as such:
 
-``` {.sourceCode .shell}
+```shell
 $ pip install thingserver
 ```
 
@@ -38,7 +38,7 @@ required to expose two properties:
 
 First we create a new Thing:
 
-``` {.sourceCode .python}
+```python
 light = Thing(
     'urn:dev:ops:my-lamp-1234',
     'My Lamp',
@@ -54,7 +54,7 @@ this, we need to have a Value object which holds the actual state and
 also a method to turn the light on/off. For our purposes, we just want
 to log the new state if the light is switched on/off.
 
-``` {.sourceCode .python}
+```python
 light.add_property(
     Property(
         light,
@@ -72,7 +72,7 @@ The `brightness` property reports the brightness level of the light and
 sets the level. Like before, instead of actually setting the level of a
 light, we just log the level.
 
-``` {.sourceCode .python}
+```python
 light.add_property(
     Property(
         light,
@@ -91,7 +91,7 @@ light.add_property(
 
 Now we can add our newly created thing to the server and start it:
 
-``` {.sourceCode .python}
+```python
 server = WebThingServer(light, port=8888)
 
 try:
@@ -116,7 +116,7 @@ if the value changes.
 
 First we create a new Thing:
 
-``` {.sourceCode .python}
+```python
 sensor = Thing(
     'urn:dev:ops:my-humidity-sensor-1234',
     'My Humidity Sensor',
@@ -131,7 +131,7 @@ Contrary to the light, the value cannot be set via an API call, as it
 wouldn't make much sense, to SET what a sensor is reading. Therefore, we
 are creating a **readOnly** property.
 
-``` {.sourceCode .python}
+```python
 sensor.add_property(
     Property(
         sensor,
@@ -156,7 +156,7 @@ Alternatively, we can create a thread that queries the physical sensor
 every few seconds. We first remove the readproperty argument from our
 Property.
 
-``` {.sourceCode .python}
+```python
 sensor.add_property(
     Property(
         sensor,
@@ -177,7 +177,7 @@ sensor.add_property(
 We then create our looping function to periodically query the sensor and
 set the property value.
 
-``` {.sourceCode .python}
+```python
 self.sensor_update_task = \
     get_event_loop().create_task(self.update_level())
 

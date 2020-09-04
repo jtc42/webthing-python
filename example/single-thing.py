@@ -1,9 +1,19 @@
 from __future__ import division
-from webthing import Action, Event, Property, Value, Thing, WebThingServer
+
+import asyncio
 import logging
+import sys
 import time
 import uuid
-import asyncio
+
+from thingserver import Action, Event, Property, Thing, Value, WebThingServer
+
+if (
+    sys.version_info[0] == 3
+    and sys.version_info[1] >= 8
+    and sys.platform.startswith("win")
+):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 class OverheatedEvent(Event):
@@ -62,16 +72,10 @@ def make_thing():
         thing,
         "fade",
         fade_function,
-        metadata={
-            "title": "Fade",
-            "description": "Fade the lamp to a given level",
-        },
-        input_ = {
+        metadata={"title": "Fade", "description": "Fade the lamp to a given level",},
+        input_={
             "type": "object",
-            "required": [
-                "brightness",
-                "duration",
-            ],
+            "required": ["brightness", "duration",],
             "properties": {
                 "brightness": {
                     "type": "integer",
@@ -79,16 +83,10 @@ def make_thing():
                     "maximum": 100,
                     "unit": "percent",
                 },
-                "duration": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "unit": "milliseconds",
-                },
+                "duration": {"type": "integer", "minimum": 1, "unit": "milliseconds",},
             },
         },
-        output = {
-            "type": "string"
-        }
+        output={"type": "string"},
     )
 
     thing.add_action(fade_action)

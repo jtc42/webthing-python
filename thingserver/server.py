@@ -1,13 +1,13 @@
 """Python Web Thing server implementation."""
 
-from zeroconf import ServiceInfo, Zeroconf
+import asyncio
 import json
+import logging
 import socket
 import sys
-import typing
 import types
-import logging
-import asyncio
+import typing
+
 import tornado.concurrent
 import tornado.gen
 import tornado.httpserver
@@ -15,11 +15,12 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 from tornado.iostream import StreamClosedError
+from zeroconf import ServiceInfo, Zeroconf
 
 from .errors import PropertyError
+from .json import JSONEncoder
 from .subscriber import Subscriber
 from .utils import get_addresses, get_ip
-from .json import JSONEncoder
 
 
 class BaseHandler(tornado.web.RequestHandler):
@@ -162,10 +163,7 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
 
         description = self.thing.as_thing_description()
         description["links"].append(
-            {
-                "rel": "alternate",
-                "href": "{}{}".format(ws_href, self.thing.get_href()),
-            }
+            {"rel": "alternate", "href": "{}{}".format(ws_href, self.thing.get_href()),}
         )
         description["base"] = "{}://{}{}".format(
             self.request.protocol,
@@ -173,9 +171,7 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
             self.thing.get_href(),
         )
         description["securityDefinitions"] = {
-            "nosec_sc": {
-                "scheme": "nosec",
-            },
+            "nosec_sc": {"scheme": "nosec",},
         }
         description["security"] = "nosec_sc"
 
@@ -311,9 +307,7 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
         message = json.dumps(
             {
                 "messageType": "propertyStatus",
-                "data": {
-                    property_.name: property_.get_value(),
-                },
+                "data": {property_.name: property_.get_value(),},
             },
             cls=self.json_encoder,
         )
@@ -327,10 +321,7 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
         :param action: Action
         """
         message = json.dumps(
-            {
-                "messageType": "actionStatus",
-                "data": action.as_action_description(),
-            },
+            {"messageType": "actionStatus", "data": action.as_action_description(),},
             cls=self.json_encoder,
         )
 
@@ -343,10 +334,7 @@ class ThingHandler(tornado.websocket.WebSocketHandler, Subscriber):
         :param event: Event
         """
         message = json.dumps(
-            {
-                "messageType": "event",
-                "data": event.as_event_description(),
-            },
+            {"messageType": "event", "data": event.as_event_description(),},
             cls=self.json_encoder,
         )
 
@@ -629,19 +617,13 @@ class WebThingServer:
 
         for address in get_addresses():
             self.hosts.extend(
-                [
-                    address,
-                    "{}:{}".format(address, self.port),
-                ]
+                [address, "{}:{}".format(address, self.port),]
             )
 
         if self.hostname is not None:
             self.hostname = self.hostname.lower()
             self.hosts.extend(
-                [
-                    self.hostname,
-                    "{}:{}".format(self.hostname, self.port),
-                ]
+                [self.hostname, "{}:{}".format(self.hostname, self.port),]
             )
 
         self.thing.set_href_prefix(self.base_path)
@@ -723,9 +705,7 @@ class WebThingServer:
         ]
         kwargs = {
             "port": self.port,
-            "properties": {
-                "path": "/",
-            },
+            "properties": {"path": "/",},
             "server": "{}.local.".format(socket.gethostname()),
         }
 

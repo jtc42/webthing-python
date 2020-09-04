@@ -1,8 +1,8 @@
 """An observable, settable value interface."""
 
-import sys
-import inspect
 import asyncio
+import inspect
+import sys
 
 if sys.version_info.major == 3:
     from pyee import AsyncIOEventEmitter as EventEmitter

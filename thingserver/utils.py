@@ -1,8 +1,9 @@
 """Utility functions."""
 
 import datetime
-import ifaddr
 import socket
+
+import ifaddr
 
 
 def timestamp():

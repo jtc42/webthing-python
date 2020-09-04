@@ -1,23 +1,21 @@
 from __future__ import division
-from webthing import (
-    Action,
-    Event,
-    Property,
-    Value,
-    Thing,
-    WebThingServer,
-)
-import logging
-import time
-import uuid
+
 import asyncio
-
 import io
+import logging
+import sys
 from datetime import datetime
-from PIL import Image, ImageFont, ImageDraw
 
-import os
-import pathlib
+from PIL import Image, ImageDraw
+
+from thingserver import Property, Thing, Value, WebThingServer
+
+if (
+    sys.version_info[0] == 3
+    and sys.version_info[1] >= 8
+    and sys.platform.startswith("win")
+):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 """
 PIL spams the logger with debug-level information. This is a pain when debugging api.app.
@@ -41,11 +39,7 @@ class StreamGenerator:
 
     def generate_new_dummy_image(self):
         # Create a dummy image to serve in the stream
-        image = Image.new(
-            "RGB",
-            (640, 480),
-            color=(0, 0, 0),
-        )
+        image = Image.new("RGB", (640, 480), color=(0, 0, 0),)
 
         draw = ImageDraw.Draw(image)
         draw.text(

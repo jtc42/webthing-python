@@ -62,10 +62,11 @@ class Thing:
 
         for name, event in self.available_events.items():
             thing["events"][name] = event["metadata"]
-            thing["events"][name]["links"] = [
+            thing["events"][name]["forms"] = [
                 {
-                    "rel": "event",
+                    "op": "subscribeevent",
                     "href": "{}/events/{}".format(self.href_prefix, name),
+                    "subprotocol": "longpoll"
                 },
             ]
 
